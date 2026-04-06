@@ -124,7 +124,7 @@ export default function LandingPage({ user, onNavigate, onLogout }) {
   return (
     <>
       {/* ─── NAV ─── */}
-      <nav>
+      <nav className="landing-nav">
         <div className="nav-inner">
           <div className="nav-logo">Gamify<em>Pro</em></div>
           <ul className="nav-links">
