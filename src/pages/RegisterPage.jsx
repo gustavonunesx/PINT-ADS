@@ -105,15 +105,40 @@ export default function RegisterPage({ onRegister, onNavigate }) {
     setStep(2)
   }
 
-  const handleSubmit = (ev) => {
+  const handleSubmit = async (ev) => {
     ev.preventDefault()
     const e = validateStep2()
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: accountType === 'institution' ? 'INSTITUTION' : 'STUDENT',
+          companyName: accountType === 'institution' ? form.company : null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 409) {
+          setStep(1)
+          setErrors({ email: data.message || 'Este e-mail já está cadastrado' })
+        } else {
+          setErrors({ confirm: data.message || 'Erro ao criar conta' })
+        }
+        return
+      }
+      localStorage.setItem('token', data.token)
+      onRegister({ name: data.name, email: data.email, type: data.role === 'INSTITUTION' ? 'institution' : 'student', company: data.companyName })
+    } catch {
+      setErrors({ confirm: 'Erro ao conectar com o servidor' })
+    } finally {
       setLoading(false)
-      onRegister({ name: form.name, email: form.email, type: accountType, company: form.company })
-    }, 1400)
+    }
   }
 
   const handleBack = () => {
