@@ -15,29 +15,12 @@ export default function LoginPage({ onLogin, onNavigate }) {
     return e
   }
 
-  const handleSubmit = async (ev) => {
+  const handleSubmit = (ev) => {
     ev.preventDefault()
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
-    try {
-      const res = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setErrors({ password: data.message || 'E-mail ou senha inválidos' })
-        return
-      }
-      localStorage.setItem('token', data.token)
-      onLogin({ name: data.name, email: data.email, type: data.role === 'INSTITUTION' ? 'institution' : 'student' })
-    } catch {
-      setErrors({ password: 'Erro ao conectar com o servidor' })
-    } finally {
-      setLoading(false)
-    }
+    setTimeout(() => { setLoading(false); onLogin({ name: 'Usuário', email: form.email }) }, 1200)
   }
 
   const set = (field) => (e) => {
