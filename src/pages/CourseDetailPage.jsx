@@ -20,23 +20,23 @@ const COURSES_DATA = {
       {
         name: 'Módulo 1 — Fundamentos',
         lessons: [
-          { id: 'l1', title: 'Introdução à Segurança', duration: '12 min', status: 'done' },
-          { id: 'l2', title: 'Ameaças e Vulnerabilidades', duration: '18 min', status: 'done' },
-          { id: 'l3', title: 'Criptografia Básica', duration: '22 min', status: 'done' },
+          { id: 'l1', title: 'Introdução à Segurança', duration: '12 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+          { id: 'l2', title: 'Ameaças e Vulnerabilidades', duration: '18 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+          { id: 'l3', title: 'Criptografia Básica', duration: '22 min', status: 'done', videoUrl: 'https://vimeo.com/123456789' },
         ],
       },
       {
         name: 'Módulo 2 — Aplicações Práticas',
         lessons: [
-          { id: 'l4', title: 'Criptografia Avançada', duration: '25 min', status: 'done' },
-          { id: 'l5', title: 'Gestão de Incidentes', duration: '20 min', status: 'done' },
-          { id: 'l6', title: 'Análise de Riscos', duration: '28 min', status: 'done' },
-          { id: 'l7', title: 'Normas ISO 27001', duration: '30 min', status: 'done' },
+          { id: 'l4', title: 'Criptografia Avançada', duration: '25 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+          { id: 'l5', title: 'Gestão de Incidentes', duration: '20 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+          { id: 'l6', title: 'Análise de Riscos', duration: '28 min', status: 'done', videoUrl: null },
+          { id: 'l7', title: 'Normas ISO 27001', duration: '30 min', status: 'done', videoUrl: null },
         ],
       },
       {
         name: 'Módulo 3 — Certificação',
-        lessons: [{ id: 'l8', title: 'Certificação Final', duration: '35 min', status: 'available' }],
+        lessons: [{ id: 'l8', title: 'Certificação Final', duration: '35 min', status: 'available', videoUrl: null }],
       },
     ],
   },
@@ -286,18 +286,22 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
                           }
                         >
                           <div className="cd-lesson-num">
-                            {lesson.status === 'done' ? (
+                            {lesson.status === 'locked' ? (
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <rect x="4" y="6" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                                <path d="M5.5 6V4.5a1.5 1.5 0 013 0V6" stroke="currentColor" strokeWidth="1.2"/>
+                              </svg>
+                            ) : lesson.status === 'done' ? (
                               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                                 <path d="M3 7l3 3 5-6" stroke={course.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                               </svg>
-                            ) : lesson.status === 'available' ? (
+                            ) : lesson.videoUrl ? (
                               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                                 <path d="M5 3l6 4-6 4V3z" fill={course.color}/>
                               </svg>
                             ) : (
                               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <rect x="4" y="6" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.2"/>
-                                <path d="M5.5 6V4.5a1.5 1.5 0 013 0V6" stroke="currentColor" strokeWidth="1.2"/>
+                                <circle cx="7" cy="7" r="4" stroke="currentColor" strokeWidth="1.2"/>
                               </svg>
                             )}
                           </div>

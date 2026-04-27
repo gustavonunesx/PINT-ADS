@@ -1,5 +1,75 @@
 import { useState, useEffect, useRef } from 'react'
 
+// Helper to extract video ID and type
+function parseVideoUrl(url) {
+  if (!url) return { type: null, id: null }
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] }
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeoMatch) return { type: 'vimeo', id: vimeoMatch[1] }
+  // Direct video (mp4, webm, etc)
+  if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i) || url.startsWith('http')) {
+    return { type: 'direct', id: url }
+  }
+  return { type: 'direct', id: url }
+}
+
+// Dynamic Video Player component
+function VideoPlayer({ videoUrl, color, onTimeUpdate, onEnded }) {
+  const videoRef = useRef(null)
+  const { type, id } = parseVideoUrl(videoUrl)
+
+  if (!videoUrl || !type) {
+    return (
+      <div className="cp-video-placeholder">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ color }}>
+          <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="2" strokeOpacity="0.3"/>
+          <path d="M26 22l18 10-18 10V22z" fill="currentColor"/>
+        </svg>
+        <span>Video nao disponivel para esta aula</span>
+      </div>
+    )
+  }
+
+  if (type === 'youtube') {
+    return (
+      <iframe
+        className="cp-video-iframe"
+        src={`https://www.youtube.com/embed/${id}?autoplay=0&rel=0`}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="YouTube video"
+      />
+    )
+  }
+
+  if (type === 'vimeo') {
+    return (
+      <iframe
+        className="cp-video-iframe"
+        src={`https://player.vimeo.com/video/${id}`}
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+        title="Vimeo video"
+      />
+    )
+  }
+
+  // Direct video with HTML5 player
+  return (
+    <video
+      ref={videoRef}
+      className="cp-video-direct"
+      src={id}
+      controls
+      onTimeUpdate={onTimeUpdate}
+      onEnded={onEnded}
+    />
+  )
+}
+
 // Course data (shared with CourseDetailPage)
 const COURSES_DATA = {
   'seguranca-info': {
@@ -16,23 +86,23 @@ const COURSES_DATA = {
       {
         name: 'Módulo 1 — Fundamentos',
         lessons: [
-          { id: 'l1', title: 'Introdução à Segurança', duration: '12 min', status: 'done', description: 'Nesta aula, você aprenderá os conceitos fundamentais de segurança da informação, incluindo confidencialidade, integridade e disponibilidade.' },
-          { id: 'l2', title: 'Ameaças e Vulnerabilidades', duration: '18 min', status: 'done', description: 'Explore os diferentes tipos de ameaças cibernéticas e como identificar vulnerabilidades em sistemas.' },
-          { id: 'l3', title: 'Criptografia Básica', duration: '22 min', status: 'done', description: 'Introdução aos princípios de criptografia simétrica e assimétrica.' },
+          { id: 'l1', title: 'Introdução à Segurança', duration: '12 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', description: 'Nesta aula, você aprenderá os conceitos fundamentais de segurança da informação, incluindo confidencialidade, integridade e disponibilidade.' },
+          { id: 'l2', title: 'Ameaças e Vulnerabilidades', duration: '18 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', description: 'Explore os diferentes tipos de ameaças cibernéticas e como identificar vulnerabilidades em sistemas.' },
+          { id: 'l3', title: 'Criptografia Básica', duration: '22 min', status: 'done', videoUrl: 'https://vimeo.com/123456789', description: 'Introdução aos princípios de criptografia simétrica e assimétrica.' },
         ],
       },
       {
         name: 'Módulo 2 — Aplicações Práticas',
         lessons: [
-          { id: 'l4', title: 'Criptografia Avançada', duration: '25 min', status: 'done', description: 'Aprofunde-se em algoritmos de criptografia modernos e suas aplicações práticas.' },
-          { id: 'l5', title: 'Gestão de Incidentes', duration: '20 min', status: 'done', description: 'Aprenda a identificar, responder e documentar incidentes de segurança.' },
-          { id: 'l6', title: 'Análise de Riscos', duration: '28 min', status: 'done', description: 'Metodologias para avaliação e mitigação de riscos em ambientes corporativos.' },
-          { id: 'l7', title: 'Normas ISO 27001', duration: '30 min', status: 'done', description: 'Conheça os requisitos e implementação da norma ISO 27001.' },
+          { id: 'l4', title: 'Criptografia Avançada', duration: '25 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', description: 'Aprofunde-se em algoritmos de criptografia modernos e suas aplicações práticas.' },
+          { id: 'l5', title: 'Gestão de Incidentes', duration: '20 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', description: 'Aprenda a identificar, responder e documentar incidentes de segurança.' },
+          { id: 'l6', title: 'Análise de Riscos', duration: '28 min', status: 'done', videoUrl: null, description: 'Metodologias para avaliação e mitigação de riscos em ambientes corporativos.' },
+          { id: 'l7', title: 'Normas ISO 27001', duration: '30 min', status: 'done', videoUrl: null, description: 'Conheça os requisitos e implementação da norma ISO 27001.' },
         ],
       },
       {
         name: 'Módulo 3 — Certificação',
-        lessons: [{ id: 'l8', title: 'Certificação Final', duration: '35 min', status: 'available', description: 'Prepare-se para a certificação final do curso com uma revisão completa.' }],
+        lessons: [{ id: 'l8', title: 'Certificação Final', duration: '35 min', status: 'available', videoUrl: null, description: 'Prepare-se para a certificação final do curso com uma revisão completa.' }],
       },
     ],
   },
@@ -251,76 +321,18 @@ export default function CoursePlayerPage({ user, onNavigate, onLogout, ctx }) {
         {/* Video Area */}
         <div className="cp-video-col">
           {/* Video Player */}
-          <div className="cp-player">
+          <div 
+            className="cp-player"
+            style={currentLesson.videoUrl ? { 
+              border: `1px solid ${course.color}40`,
+              boxShadow: `0 0 40px ${course.color}15`
+            } : {}}
+          >
             <div className="cp-video-area">
-              {/* Play/Pause Button Overlay */}
-              <button className="cp-play-btn" onClick={handlePlayPause}>
-                {isPlaying ? (
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <rect x="9" y="8" width="5" height="16" rx="1" fill="white"/>
-                    <rect x="18" y="8" width="5" height="16" rx="1" fill="white"/>
-                  </svg>
-                ) : (
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <path d="M12 8l12 8-12 8V8z" fill="white"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-
-            {/* Video Controls */}
-            <div className="cp-controls">
-              {/* Progress Bar */}
-              <div className="cp-seek-bar" onClick={handleSeek}>
-                <div className="cp-seek-fill" style={{ width: `${progress}%`, background: course.color }} />
-                <div className="cp-seek-thumb" style={{ left: `${progress}%`, background: course.color }} />
-              </div>
-
-              <div className="cp-controls-row">
-                {/* Play/Pause */}
-                <button className="cp-ctrl-btn" onClick={handlePlayPause}>
-                  {isPlaying ? (
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <rect x="4" y="3" width="3" height="12" rx="1" fill="currentColor"/>
-                      <rect x="11" y="3" width="3" height="12" rx="1" fill="currentColor"/>
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <path d="M5 3l10 6-10 6V3z" fill="currentColor"/>
-                    </svg>
-                  )}
-                </button>
-
-                {/* Time */}
-                <span className="cp-time">{currentTime} / {formatTime(videoDuration)}</span>
-
-                {/* Spacer */}
-                <div style={{ flex: 1 }} />
-
-                {/* Volume */}
-                <div className="cp-volume-wrap">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 6v4h3l4 3V3L5 6H2z" fill="currentColor"/>
-                    {volume > 0 && <path d="M11 5.5c1 1 1 4 0 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>}
-                    {volume > 50 && <path d="M13 4c1.5 1.5 1.5 6.5 0 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>}
-                  </svg>
-                  <input
-                    type="range"
-                    className="cp-volume-slider"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                  />
-                </div>
-
-                {/* Fullscreen */}
-                <button className="cp-ctrl-btn">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
+              <VideoPlayer 
+                videoUrl={currentLesson.videoUrl} 
+                color={course.color}
+              />
             </div>
           </div>
 
@@ -444,18 +456,22 @@ export default function CoursePlayerPage({ user, onNavigate, onLogout, ctx }) {
                       style={lesson.id === lessonId ? { background: `${course.color}15`, borderLeftColor: course.color } : {}}
                     >
                       <div className="cp-sidebar-lesson-icon">
-                        {lesson.status === 'done' ? (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6l3 3 5-6" stroke={course.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        ) : lesson.status === 'available' ? (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M4 2l6 4-6 4V2z" fill={lesson.id === lessonId ? course.color : 'currentColor'}/>
-                          </svg>
-                        ) : (
+                        {lesson.status === 'locked' ? (
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                             <rect x="3" y="5" width="6" height="5" rx="1" stroke="currentColor" strokeWidth="1"/>
                             <path d="M4.5 5V3.5a1.5 1.5 0 013 0V5" stroke="currentColor" strokeWidth="1"/>
+                          </svg>
+                        ) : lesson.status === 'done' ? (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-6" stroke={course.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        ) : lesson.videoUrl ? (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M4 2l6 4-6 4V2z" fill={course.color}/>
+                          </svg>
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1"/>
                           </svg>
                         )}
                       </div>

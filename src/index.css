@@ -849,6 +849,45 @@ footer { border-top: 1px solid var(--border); }
 .lesson-publish-toggle { width:100%; padding:0.6rem; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:'Inter',sans-serif; font-size:0.83rem; cursor:pointer; transition:all 0.18s; font-weight:500; }
 .lesson-publish-toggle:hover { border-color:rgba(255,255,255,0.2); }
 
+/* Video URL input and preview */
+.video-input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.video-input-icon {
+  position: absolute; left: 0.75rem;
+  color: var(--text-muted); pointer-events: none;
+}
+.video-input {
+  padding-left: 2.4rem !important;
+}
+.video-preview {
+  margin-top: 0.75rem;
+  position: relative; padding-top: 56.25%; /* 16:9 */
+  background: #000; border-radius: var(--radius);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.video-preview iframe,
+.video-preview video {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none;
+}
+.video-preview-empty {
+  margin-top: 0.75rem;
+  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0.5rem; color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.video-helper {
+  display: block; margin-top: 0.5rem;
+  font-size: 0.72rem; color: var(--text-muted);
+}
+
 /* ══════════════════════════════════════════════════
    STUDENT DASHBOARD (landing-style)
 ══════════════════════════════════════════════════ */
@@ -1495,23 +1534,29 @@ footer { border-top: 1px solid var(--border); }
   position: relative; padding-top: 56.25%; /* 16:9 */
   background: linear-gradient(135deg, #0a0a0f 0%, #111118 100%);
 }
-.cp-play-btn {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 72px; height: 72px; border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.15);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: all 0.2s;
-}
-.cp-play-btn:hover {
-  background: rgba(255,255,255,0.15);
-  transform: translate(-50%, -50%) scale(1.05);
+
+/* Video iframes and direct video */
+.cp-video-iframe,
+.cp-video-direct {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  border: none;
 }
 
-/* Controls */
-.cp-controls { padding: 0.75rem 1rem 1rem; }
+/* Video placeholder (no video available) */
+.cp-video-placeholder {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #0a0a0f 0%, #111118 100%);
+}
+.cp-video-placeholder span {
+  font-size: 0.9rem; color: var(--text-muted);
+}
+
+/* Controls (kept for backwards compat) */
 .cp-seek-bar {
   height: 4px; background: rgba(255,255,255,0.1);
   border-radius: 100px; cursor: pointer;
