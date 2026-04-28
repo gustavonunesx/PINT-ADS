@@ -9,17 +9,17 @@ const INITIAL_COURSES = [
     id: 'c1', name: 'Segurança da Informação', institution: 'Universidade Nova',
     banner: null, color: '#3be8b0', students: 128, lessons: 8, published: true,
     lessons_data: [
-      { id: 'l1', title: 'Fundamentos de Segurança', cover: null, duration: '12 min', published: true },
-      { id: 'l2', title: 'Phishing e Engenharia Social', cover: null, duration: '9 min', published: true },
-      { id: 'l3', title: 'Criptografia Avançada', cover: null, duration: '20 min', published: false },
+      { id: 'l1', title: 'Fundamentos de Segurança', cover: null, duration: '12 min', published: true, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      { id: 'l2', title: 'Phishing e Engenharia Social', cover: null, duration: '9 min', published: true, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
+      { id: 'l3', title: 'Criptografia Avançada', cover: null, duration: '20 min', published: false, videoUrl: null },
     ]
   },
   {
     id: 'c2', name: 'Compliance & LGPD', institution: 'Universidade Nova',
     banner: null, color: '#63c8ff', students: 74, lessons: 5, published: true,
     lessons_data: [
-      { id: 'l1', title: 'Introdução à LGPD', cover: null, duration: '10 min', published: true },
-      { id: 'l2', title: 'Bases Legais', cover: null, duration: '15 min', published: false },
+      { id: 'l1', title: 'Introdução à LGPD', cover: null, duration: '10 min', published: true, videoUrl: 'https://vimeo.com/123456789' },
+      { id: 'l2', title: 'Bases Legais', cover: null, duration: '15 min', published: false, videoUrl: null },
     ]
   },
 ]
@@ -62,6 +62,78 @@ function BannerUpload({ banner, onUpload, color }) {
         )}
       <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={e => handleFile(e.target.files[0])} />
+    </div>
+  )
+}
+
+// Helper to extract video ID and type
+function parseVideoUrl(url) {
+  if (!url) return { type: null, id: null }
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] }
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeoMatch) return { type: 'vimeo', id: vimeoMatch[1] }
+  // Direct video (mp4, webm, etc)
+  if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i) || url.startsWith('http')) {
+    return { type: 'direct', id: url }
+  }
+  return { type: 'direct', id: url }
+}
+
+function VideoPreview({ url, color }) {
+  const [debouncedUrl, setDebouncedUrl] = useState(url)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedUrl(url), 400)
+    return () => clearTimeout(timer)
+  }, [url])
+
+  const { type, id } = parseVideoUrl(debouncedUrl)
+
+  if (!debouncedUrl || !type) {
+    return (
+      <div className="video-preview-empty">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ opacity: 0.4 }}>
+          <rect x="2" y="6" width="28" height="20" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M13 11l8 5-8 5V11z" fill="currentColor"/>
+        </svg>
+        <span>Nenhum video adicionado</span>
+      </div>
+    )
+  }
+
+  if (type === 'youtube') {
+    return (
+      <div className="video-preview" style={{ borderColor: `${color}40`, boxShadow: `0 0 24px ${color}15` }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${id}?rel=0`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title="YouTube video"
+        />
+      </div>
+    )
+  }
+
+  if (type === 'vimeo') {
+    return (
+      <div className="video-preview" style={{ borderColor: `${color}40`, boxShadow: `0 0 24px ${color}15` }}>
+        <iframe
+          src={`https://player.vimeo.com/video/${id}`}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title="Vimeo video"
+        />
+      </div>
+    )
+  }
+
+  // Direct video
+  return (
+    <div className="video-preview" style={{ borderColor: `${color}40`, boxShadow: `0 0 24px ${color}15` }}>
+      <video src={id} controls />
     </div>
   )
 }
@@ -167,6 +239,7 @@ function LessonEditor({ course, onClose, onSave }) {
       title: `Aula ${lessons.length + 1}`,
       cover: null,
       duration: '10 min',
+      videoUrl: null,
       published: false,
     }
     setLessons(ls => [...ls, newL])
@@ -222,7 +295,11 @@ function LessonEditor({ course, onClose, onSave }) {
                 onClick={() => setEditing(lesson.id)}>
                 <div className="lesson-item-num"
                   style={{ background: `${course.color}18`, color: course.color }}>
-                  {idx + 1}
+                  {lesson.videoUrl ? (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 1l7 4-7 4V1z" fill="currentColor"/>
+                    </svg>
+                  ) : idx + 1}
                 </div>
                 <CoverUpload cover={lesson.cover} small
                   onUpload={url => updateLesson(lesson.id, 'cover', url)} />
@@ -278,6 +355,22 @@ function LessonEditor({ course, onClose, onSave }) {
                       value={lesson.duration}
                       onChange={e => updateLesson(lesson.id, 'duration', e.target.value)}
                       placeholder="Ex: 15 min" />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Video da aula</label>
+                    <div className="video-input-wrap">
+                      <svg className="video-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 8h4M8 6v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                        <path d="M3 9V7a4 4 0 018 0v2M5 9a2 2 0 004 0" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                      </svg>
+                      <input className="form-input video-input" type="text"
+                        value={lesson.videoUrl || ''}
+                        onChange={e => updateLesson(lesson.id, 'videoUrl', e.target.value || null)}
+                        placeholder="Cole o link do YouTube, Vimeo ou outro..." />
+                    </div>
+                    <VideoPreview url={lesson.videoUrl} color={course.color} />
+                    <span className="video-helper">Suporta YouTube, Vimeo e links diretos de video (.mp4)</span>
                   </div>
 
                   <div className="form-group">

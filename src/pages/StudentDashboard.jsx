@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 const MOCK_USER = { name: 'Ana Silva', xp: 3840, level: 12, streak: 7 }
 
 const MY_COURSES = [
-  { id: 'c1', name: 'Segurança da Informação', institution: 'Universidade Nova', color: '#3be8b0', glow: 'rgba(59,232,176,0.15)', badge: '🛡️', progress: 87, lessonsTotal: 8, lessonsDone: 7, lastAccess: 'hoje',     nextLesson: 'Certificação Final' },
-  { id: 'c2', name: 'Compliance & LGPD',        institution: 'Universidade Nova', color: '#63c8ff', glow: 'rgba(99,200,255,0.15)',  badge: '⚖️', progress: 65, lessonsTotal: 6, lessonsDone: 4, lastAccess: 'ontem',    nextLesson: 'DPO e Responsabilidades' },
-  { id: 'c3', name: 'Boas Práticas Dev',         institution: 'Tech Academy',      color: '#a78bfa', glow: 'rgba(167,139,250,0.15)', badge: '💻', progress: 100,lessonsTotal: 5, lessonsDone: 5, lastAccess: '3 dias',   nextLesson: null },
-  { id: 'c4', name: 'Soft Skills & Liderança',   institution: 'Universidade Nova', color: '#f87171', glow: 'rgba(248,113,113,0.15)', badge: '🌱', progress: 20, lessonsTotal: 7, lessonsDone: 1, lastAccess: '1 semana', nextLesson: 'Comunicação Não-Violenta' },
+  { id: 'seguranca-info',   name: 'Segurança da Informação', institution: 'Universidade Nova', color: '#3be8b0', glow: 'rgba(59,232,176,0.15)', badge: '🛡️', progress: 87, lessonsTotal: 8, lessonsDone: 7, lastAccess: 'hoje',     nextLesson: 'Certificação Final' },
+  { id: 'compliance-lgpd',  name: 'Compliance & LGPD',        institution: 'Universidade Nova', color: '#63c8ff', glow: 'rgba(99,200,255,0.15)',  badge: '⚖️', progress: 65, lessonsTotal: 6, lessonsDone: 4, lastAccess: 'ontem',    nextLesson: 'DPO e Responsabilidades' },
+  { id: 'boas-praticas-dev', name: 'Boas Práticas Dev',         institution: 'Tech Academy',      color: '#a78bfa', glow: 'rgba(167,139,250,0.15)', badge: '💻', progress: 100,lessonsTotal: 5, lessonsDone: 5, lastAccess: '3 dias',   nextLesson: null },
+  { id: 'soft-skills',      name: 'Soft Skills & Liderança',   institution: 'Universidade Nova', color: '#f87171', glow: 'rgba(248,113,113,0.15)', badge: '🌱', progress: 20, lessonsTotal: 7, lessonsDone: 1, lastAccess: '1 semana', nextLesson: 'Comunicação Não-Violenta' },
 ]
 
 const WEEKLY_DAYS = [
@@ -352,12 +352,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
                   </div>
                   <button className="sp-cc-btn"
                     style={{ color: course.color, borderColor: `${course.color}35`, background: `${course.color}0c` }}
-                    onClick={() => showToast(
-                      course.progress === 100 ? `Revisando "${course.name}"` :
-                      course.progress === 0   ? `Iniciando "${course.name}"` :
-                                                `Continuando "${course.name}" — ${course.nextLesson}`,
-                      course.color
-                    )}>
+                    onClick={() => onNavigate('course-detail', { courseId: course.id })}>
                     {course.progress === 100 ? 'Revisar curso' : course.progress === 0 ? 'Começar →' : 'Continuar →'}
                   </button>
                 </div>
