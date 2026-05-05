@@ -219,11 +219,11 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
       <nav className="cd-nav">
         <div className="cd-nav-inner">
           <div className="cd-nav-left">
-            <button className="cd-back-btn" onClick={() => onNavigate('my-courses')}>
+            <button className="cd-back-btn" onClick={() => onNavigate(ctx.from || 'dashboard')}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Meus Cursos
+              {ctx.from === 'my-courses' ? 'Meus Cursos' : 'Início'}
             </button>
             <span className="cd-breadcrumb-sep">/</span>
             <span className="cd-breadcrumb-current">{course.name}</span>

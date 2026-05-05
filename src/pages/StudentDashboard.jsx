@@ -352,7 +352,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
                   </div>
                   <button className="sp-cc-btn"
                     style={{ color: course.color, borderColor: `${course.color}35`, background: `${course.color}0c` }}
-                    onClick={() => onNavigate('course-detail', { courseId: course.id })}>
+                    onClick={() => onNavigate('course-detail', { courseId: course.id, from: 'dashboard' })}>
                     {course.progress === 100 ? 'Revisar curso' : course.progress === 0 ? 'Começar →' : 'Continuar →'}
                   </button>
                 </div>

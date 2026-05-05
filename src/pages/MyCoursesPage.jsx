@@ -215,7 +215,7 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
                         background: course.color,
                         boxShadow: `0 0 20px ${course.glow}`,
                       }}
-                      onClick={() => onNavigate('course-detail', { courseId: course.id })}
+                      onClick={() => onNavigate('course-detail', { courseId: course.id, from: 'my-courses' })}
                     >
                       {course.progress === 100 ? 'Revisar' : 'Continuar'}
                     </button>
