@@ -51,9 +51,14 @@ function XPRing({ pct, color }) {
 }
 
 export default function DashboardPage({ user, onNavigate, onLogout }) {
-  const u = user ? { ...MOCK_USER, name: user.name } : MOCK_USER
+  const u = {
+    name:   user?.name   ?? MOCK_USER.name,
+    xp:     user?.xp     ?? MOCK_USER.xp,
+    level:  user?.level  ?? MOCK_USER.level,
+    streak: user?.streak ?? MOCK_USER.streak,
+  }
   const xpToNext = 5000
-  const xpPct = Math.round((u.xp / xpToNext) * 100)
+  const xpPct = Math.round(((u.xp % xpToNext) / xpToNext) * 100)
 
   return (
     <AppShell user={u} onNavigate={onNavigate} onLogout={onLogout} activePage="dashboard">

@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { user as userApi, auth as authApi } from './api/client'
 import LandingPage          from './pages/LandingPage'
 import LoginPage            from './pages/LoginPage'
 import RegisterPage         from './pages/RegisterPage'
@@ -16,6 +17,15 @@ export default function App() {
   const [page, setPage] = useState('landing')
   const [user, setUser] = useState(null)
   const [ctx,  setCtx]  = useState({})
+
+  // Restaura sessão se houver token salvo
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    userApi.profile()
+      .then(u => { setUser(u); setPage(u.type === 'institution' ? 'institution' : 'dashboard') })
+      .catch(() => localStorage.removeItem('token'))
+  }, [])
 
   const navigate = useCallback((p, extra = {}) => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -35,9 +45,14 @@ export default function App() {
     navigate(u.type === 'institution' ? 'institution' : 'dashboard')
   }
 
-  const handleLogout = () => { setUser(null); navigate('landing') }
+  const handleLogout = async () => {
+    try { await authApi.logout() } catch (_) {}
+    localStorage.removeItem('token')
+    setUser(null)
+    navigate('landing')
+  }
 
-  const props = { user, onNavigate: navigate, onLogout: handleLogout, ctx }
+  const props = { user, setUser, onNavigate: navigate, onLogout: handleLogout, ctx }
 
   switch (page) {
     case 'login':         return <LoginPage            onLogin={handleLogin}       onNavigate={navigate} />

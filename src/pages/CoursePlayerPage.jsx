@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { activities } from '../api/client'
 
 // Helper to extract video ID and type
 function parseVideoUrl(url) {
@@ -195,7 +196,7 @@ const COURSES_DATA = {
   },
 }
 
-export default function CoursePlayerPage({ user, onNavigate, onLogout, ctx }) {
+export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, ctx }) {
   const courseId = ctx?.courseId || 'seguranca-info'
   const lessonId = ctx?.lessonId || 'l1'
   const course = COURSES_DATA[courseId] || COURSES_DATA['seguranca-info']
@@ -258,10 +259,16 @@ export default function CoursePlayerPage({ user, onNavigate, onLogout, ctx }) {
     setCurrentTime(formatTime((newProgress / 100) * videoDuration))
   }
 
-  const handleMarkComplete = () => {
+  const handleMarkComplete = async () => {
     showToast(`Aula "${currentLesson.title}" marcada como concluída!`)
     setProgress(100)
     setCurrentTime(formatTime(videoDuration))
+    try {
+      const res = await activities.completeLesson(currentLesson.id)
+      if (res && setUser) {
+        setUser(prev => ({ ...prev, xp: res.totalXp ?? prev.xp, level: res.level ?? prev.level }))
+      }
+    } catch (_) {}
   }
 
   useEffect(() => {

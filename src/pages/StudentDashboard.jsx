@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { user as userApi, courses as coursesApi } from '../api/client'
 
 // ── Mock data ──────────────────────────────────────────────────────────────
 const MOCK_USER = { name: 'Ana Silva', xp: 3840, level: 12, streak: 7 }
@@ -76,15 +77,25 @@ function Tooltip({ text, children }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────
-export default function StudentDashboard({ user, onNavigate, onLogout }) {
-  const u          = user ? { ...MOCK_USER, name: user.name } : MOCK_USER
+export default function StudentDashboard({ user, setUser, onNavigate, onLogout }) {
+  // Dados dinâmicos vindos do backend
+  const [dashboard,   setDashboard]   = useState(null)
+  const [myCourses,   setMyCourses]   = useState(MY_COURSES)
+  const [weeklyDays,  setWeeklyDays]  = useState(WEEKLY_DAYS)
+  const [recentAct,   setRecentAct]   = useState(RECENT_ACTIVITY)
+  const [achievements,setAchievements]= useState(ACHIEVEMENTS)
+
+  // Dados do usuário: prioriza o que vem do backend, fallback para mock
+  const u = {
+    name:   user?.name   ?? MOCK_USER.name,
+    xp:     user?.xp     ?? MOCK_USER.xp,
+    level:  user?.level  ?? MOCK_USER.level,
+    streak: user?.streak ?? MOCK_USER.streak,
+  }
+
   const xpToNext   = 5000
-  const xpPct      = Math.round((u.xp / xpToNext) * 100)
-  const totalMin   = WEEKLY_DAYS.reduce((s, d) => s + d.minutes, 0)
-  const maxMin     = Math.max(...WEEKLY_DAYS.map(d => d.minutes), 1)
-  const activeDays = WEEKLY_DAYS.filter(d => d.done).length
+  const xpPct      = Math.round(((u.xp % xpToNext) / xpToNext) * 100)
   const firstName  = u.name.split(' ')[0]
-  const nextCourse = MY_COURSES.find(c => c.progress > 0 && c.progress < 100)
 
   const [filter,      setFilter]      = useState('all')
   const [activeTab,   setActiveTab]   = useState('atividade')
@@ -92,7 +103,32 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
   const [searchQuery, setSearchQuery] = useState('')
   const toastTimer = useRef(null)
 
-  const filtered = MY_COURSES.filter(c => {
+  // Busca dados do dashboard ao montar
+  useEffect(() => {
+    userApi.dashboard()
+      .then(data => {
+        if (data.weeklyStats)    setWeeklyDays(data.weeklyStats)
+        if (data.recentActivity) setRecentAct(data.recentActivity)
+        // Atualiza o user global com XP/level/streak vindos do backend
+        if (data.user && setUser) setUser(prev => ({ ...prev, ...data.user }))
+      })
+      .catch(() => { /* mantém mock se backend não disponível */ })
+
+    coursesApi.list()
+      .then(data => { if (data?.length) setMyCourses(data) })
+      .catch(() => {})
+
+    userApi.achievements()
+      .then(data => { if (data?.length) setAchievements(data) })
+      .catch(() => {})
+  }, [])
+
+  const totalMin   = weeklyDays.reduce((s, d) => s + d.minutes, 0)
+  const maxMin     = Math.max(...weeklyDays.map(d => d.minutes), 1)
+  const activeDays = weeklyDays.filter(d => d.done).length
+  const nextCourse = myCourses.find(c => c.progress > 0 && c.progress < 100)
+
+  const filtered = myCourses.filter(c => {
     const matchFilter =
       filter === 'inprogress' ? c.progress > 0 && c.progress < 100 :
       filter === 'done'       ? c.progress === 100 : true
@@ -184,9 +220,9 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
             </div>
             <div className="hero-stats">
               {[
-                { v: MY_COURSES.filter(c => c.progress > 0 && c.progress < 100).length, l: 'Em andamento' },
-                { v: MY_COURSES.filter(c => c.progress === 100).length,                 l: 'Concluídos'   },
-                { v: MY_COURSES.reduce((s, c) => s + c.lessonsDone, 0),                 l: 'Aulas feitas' },
+                { v: myCourses.filter(c => c.progress > 0 && c.progress < 100).length, l: 'Em andamento' },
+                { v: myCourses.filter(c => c.progress === 100).length,                 l: 'Concluídos'   },
+                { v: myCourses.reduce((s, c) => s + c.lessonsDone, 0),                 l: 'Aulas feitas' },
                 { v: 3, l: 'Certificados' },
               ].map(({ v, l }) => (
                 <div className="stat-card" key={l}>
@@ -217,7 +253,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
                 ))}
               </div>
               <div className="sp-wchart">
-                {WEEKLY_DAYS.map(d => (
+                {weeklyDays.map(d => (
                   <Tooltip key={d.day} text={d.minutes > 0 ? `${d.minutes}min` : 'Sem estudo'}>
                     <div className="sp-wbar-col">
                       <div className="sp-wbar-wrap">
@@ -385,9 +421,9 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
               </div>
             </div>
             <div className="sp-streak-row">
-              {WEEKLY_DAYS.map((d, i) => (
+              {weeklyDays.map((d, i) => (
                 <div key={d.day} className="sp-sday">
-                  <div className={`sp-sdot ${d.done ? 'done' : i === WEEKLY_DAYS.findIndex(x => !x.done) ? 'today' : ''}`}>
+                  <div className={`sp-sdot ${d.done ? 'done' : i === weeklyDays.findIndex(x => !x.done) ? 'today' : ''}`}>
                     {d.done && (
                       <svg width="10" height="10" viewBox="0 0 10 10">
                         <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
@@ -413,7 +449,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
 
             {activeTab === 'atividade' && (
               <div className="sp-activity-list">
-                {RECENT_ACTIVITY.map((item, i) => (
+                {recentAct.map((item, i) => (
                   <div key={i} className="sp-act-row">
                     <div className="sp-act-pip" style={{ background: item.color }} />
                     <div className="sp-act-body">
@@ -431,7 +467,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
 
             {activeTab === 'cursos' && (
               <div className="sp-course-progress-list">
-                {MY_COURSES.map(c => (
+                {myCourses.map(c => (
                   <div key={c.id} className="sp-cp-row">
                     <span className="sp-cp-badge">{c.badge}</span>
                     <div className="sp-cp-info">
@@ -459,7 +495,7 @@ export default function StudentDashboard({ user, onNavigate, onLogout }) {
           </div>
 
           <div className="sp-ach-grid sp-reveal" data-delay="80">
-            {ACHIEVEMENTS.map(a => (
+            {achievements.map(a => (
               <div key={a.label} className={`sp-ach ${a.unlocked ? 'unlocked' : 'locked'}`}
                 onClick={() => a.unlocked && showToast(`🏅 "${a.label}" desbloqueada!`)}>
                 <div className="sp-ach-icon">{a.icon}</div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import AppShell from '../components/AppShell'
+import { activities } from '../api/client'
 
 // ── Quiz module ──────────────────────────────────────────────────────
 const QUIZ_QUESTIONS = [
@@ -332,15 +333,30 @@ function VideoModule({ mod, trail, onComplete }) {
 }
 
 // ── Main ActivityPage ────────────────────────────────────────────────
-export default function ActivityPage({ user, onNavigate, onLogout, ctx }) {
+export default function ActivityPage({ user, setUser, onNavigate, onLogout, ctx }) {
   const mod   = ctx?.mod   || { id:'s7', title:'Criptografia Avançada', type:'lesson', xp:200, duration:'20 min' }
   const trail = ctx?.trail || { title:'Segurança da Informação', color:'#3be8b0', glow:'rgba(59,232,176,0.15)', badge:'🛡️', id:'security' }
 
   const [completed, setCompleted] = useState(false)
+  const [xpResult,  setXpResult]  = useState(null) // { xpEarned, totalXp, level, leveledUp }
 
-  const handleComplete = () => {
+  const handleComplete = async (quizResult = null) => {
+    try {
+      const payload = quizResult
+        ? { score: quizResult.correct, totalQuestions: quizResult.total }
+        : {}
+      const res = await activities.completeTrailModule(mod.id, payload)
+      setXpResult(res)
+      // Atualiza XP/level no estado global
+      if (setUser && res) {
+        setUser(prev => ({ ...prev, xp: res.totalXp, level: res.level }))
+      }
+    } catch (_) {
+      // Se backend não disponível, mostra XP do mock
+      setXpResult({ xpEarned: mod.xp })
+    }
     setCompleted(true)
-    setTimeout(() => onNavigate('trail', { trailId: trail.id, trail }), 2000)
+    setTimeout(() => onNavigate('trail', { trailId: trail.id, trail }), 2500)
   }
 
   return (
@@ -371,7 +387,8 @@ export default function ActivityPage({ user, onNavigate, onLogout, ctx }) {
               <svg width="56" height="56" viewBox="0 0 56 56"><path d="M12 28l10 10 22-22" stroke={trail.color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
             <h2 style={{color:trail.color}}>Módulo concluído!</h2>
-            <p>+{mod.xp} XP adicionados ao seu perfil</p>
+            <p>+{xpResult?.xpEarned ?? mod.xp} XP adicionados ao seu perfil</p>
+            {xpResult?.leveledUp && <p style={{color: trail.color, fontWeight: 700}}>🎉 Subiu para o nível {xpResult.level}!</p>}
             <p className="complete-redirect">Voltando para a trilha...</p>
           </div>
         ) : mod.type === 'quiz' ? (

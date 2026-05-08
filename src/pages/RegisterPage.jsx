@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import AuthShell from '../components/AuthShell'
+import { auth } from '../api/client'
 
 const ROLES = ['Desenvolvedor(a)', 'Designer', 'Gestor(a)', 'Analista', 'RH / People', 'Outro']
 
@@ -105,15 +106,27 @@ export default function RegisterPage({ onRegister, onNavigate }) {
     setStep(2)
   }
 
-  const handleSubmit = (ev) => {
+  const handleSubmit = async (ev) => {
     ev.preventDefault()
     const e = validateStep2()
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
-    setTimeout(() => {
+    try {
+      const res = await auth.register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        type: accountType,
+        company: form.company || undefined,
+        role: form.role || undefined,
+      })
+      localStorage.setItem('token', res.token)
+      onRegister(res.user)
+    } catch (err) {
+      setErrors({ name: err?.error || 'Erro ao criar conta. Tente novamente.' })
+    } finally {
       setLoading(false)
-      onRegister({ name: form.name, email: form.email, type: accountType, company: form.company })
-    }, 1400)
+    }
   }
 
   const handleBack = () => {

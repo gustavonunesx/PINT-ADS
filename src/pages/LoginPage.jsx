@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import AuthShell from '../components/AuthShell'
+import { auth } from '../api/client'
 
 export default function LoginPage({ onLogin, onNavigate }) {
   const [form, setForm]       = useState({ email: '', password: '' })
   const [errors, setErrors]   = useState({})
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw]   = useState(false)
+  const [apiError, setApiError] = useState('')
 
   const validate = () => {
     const e = {}
@@ -15,12 +17,22 @@ export default function LoginPage({ onLogin, onNavigate }) {
     return e
   }
 
-  const handleSubmit = (ev) => {
+  const handleSubmit = async (ev) => {
     ev.preventDefault()
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
     setLoading(true)
-    setTimeout(() => { setLoading(false); onLogin({ name: 'Usuário', email: form.email }) }, 1200)
+    setApiError('')
+    try {
+      const res = await auth.login(form.email, form.password)
+      localStorage.setItem('token', res.token)
+      onLogin(res.user)
+    } catch (err) {
+      console.error('[Login] Erro do backend:', err)
+      setApiError(err?.error || 'Erro ao entrar. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const set = (field) => (e) => {
@@ -34,6 +46,11 @@ export default function LoginPage({ onLogin, onNavigate }) {
         <h1 className="auth-title">Bem-vindo de volta</h1>
         <p className="auth-subtitle">Entre na sua conta para continuar aprendendo</p>
       </div>
+      {apiError && (
+        <div style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', color: '#f87171', fontSize: '0.85rem', marginBottom: '12px' }}>
+          {apiError}
+        </div>
+      )}
 
       <form className="auth-form" onSubmit={handleSubmit} noValidate>
         <div className={`form-group ${errors.email ? 'has-error' : ''}`}>
