@@ -40,4 +40,18 @@ public class ActivityController {
         int total   = req != null ? req.totalQuestions() : 0;
         return ResponseEntity.ok(activityService.completeLesson(id, user, correct, total));
     }
+
+    @PostMapping("/courses/{courseId}/complete")
+    public ResponseEntity<?> completeCourse(
+            @PathVariable Long courseId,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        User user = UserResolver.resolve(auth, userRepository);
+        try {
+            return ResponseEntity.ok(activityService.completeCourse(courseId, user));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(java.util.Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
 }

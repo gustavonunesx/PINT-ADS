@@ -234,6 +234,7 @@ public class CourseService {
                 institution,
                 accessCode,
                 course.isPublished(),
+                course.getXpReward(),
                 totalLessons,
                 completedLessons,
                 totalLessons,

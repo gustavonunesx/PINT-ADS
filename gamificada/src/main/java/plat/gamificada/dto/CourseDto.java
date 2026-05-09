@@ -13,6 +13,7 @@ public record CourseDto(
         String institution,
         String accessCode,
         boolean published,
+        int xpReward,
         int totalLessons,
         int completedLessons,
         int lessonsCount,

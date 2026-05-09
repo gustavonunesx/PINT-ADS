@@ -19,6 +19,8 @@ public class ActivityService {
     private final UserTrailModuleProgressRepository trailProgressRepo;
     private final LessonRepository lessonRepo;
     private final UserLessonProgressRepository lessonProgressRepo;
+    private final CourseRepository courseRepo;
+    private final UserCourseProgressRepository courseProgressRepo;
     private final XpService xpService;
     private final AchievementService achievementService;
 
@@ -109,6 +111,41 @@ public class ActivityService {
         lessonProgressRepo.save(progress);
 
         xpService.addXp(user, xpEarned, "Lição: " + lesson.getTitle());
+
+        List<Achievement> unlocked = achievementService.checkAndUnlock(user);
+        List<AchievementDto> achDtos = unlocked.stream()
+                .map(a -> new AchievementDto(a.getId(), a.getKey(), a.getTitle(),
+                        a.getDescription(), a.getIcon(), a.getXpReward(), LocalDateTime.now().toString()))
+                .toList();
+
+        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), achDtos);
+    }
+
+    @Transactional
+    public CompleteResponse completeCourse(Long courseId, User user) {
+        Course course = courseRepo.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Curso não encontrado: " + courseId));
+
+        if (courseProgressRepo.existsByCourseAndUser(course, user)) {
+            return new CompleteResponse(0, user.getXp(), user.getLevel(), List.of());
+        }
+
+        long total = lessonRepo.countByModule_Course(course);
+        long completed = lessonProgressRepo.countCompletedByUserAndCourse(user, courseId);
+
+        if (total > 0 && completed < total) {
+            throw new IllegalStateException("Nem todas as aulas foram concluídas.");
+        }
+
+        UserCourseProgress progress = new UserCourseProgress();
+        progress.setCourse(course);
+        progress.setUser(user);
+        courseProgressRepo.save(progress);
+
+        int xpEarned = course.getXpReward();
+        if (xpEarned > 0) {
+            xpService.addXp(user, xpEarned, "Conclusão do curso: " + course.getTitle());
+        }
 
         List<Achievement> unlocked = achievementService.checkAndUnlock(user);
         List<AchievementDto> achDtos = unlocked.stream()

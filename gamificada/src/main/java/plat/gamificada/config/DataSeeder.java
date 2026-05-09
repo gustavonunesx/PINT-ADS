@@ -32,33 +32,6 @@ public class DataSeeder implements ApplicationRunner {
         institution.setCompanyName("SENAI Digital");
         userRepo.save(institution);
 
-        User student1 = new User();
-        student1.setName("Ana Silva");
-        student1.setEmail("ana@example.com");
-        student1.setRole(User.Role.STUDENT);
-        student1.setXp(3200);
-        student1.setLevel(1);
-        student1.setStreak(5);
-        userRepo.save(student1);
-
-        User student2 = new User();
-        student2.setName("Carlos Mendes");
-        student2.setEmail("carlos@example.com");
-        student2.setRole(User.Role.STUDENT);
-        student2.setXp(7800);
-        student2.setLevel(2);
-        student2.setStreak(12);
-        userRepo.save(student2);
-
-        User student3 = new User();
-        student3.setName("Beatriz Costa");
-        student3.setEmail("beatriz@example.com");
-        student3.setRole(User.Role.STUDENT);
-        student3.setXp(1500);
-        student3.setLevel(1);
-        student3.setStreak(2);
-        userRepo.save(student3);
-
         // ── Conquistas ──────────────────────────────────────────────
         seedAchievements();
 

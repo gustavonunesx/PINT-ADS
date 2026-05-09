@@ -32,6 +32,7 @@ public class Course {
     private String accessCode;
 
     private boolean published = false;
+    private int xpReward = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "institution_id")
