@@ -4,13 +4,20 @@ import java.util.List;
 
 public record CourseDto(
         Long id,
-        String title,
+        String name,
         String description,
         String category,
         String difficulty,
         String thumbnailUrl,
-        String institutionName,
+        String color,
+        String institution,
+        String accessCode,
+        boolean published,
         int totalLessons,
         int completedLessons,
-        List<CourseModuleDto> modules
+        int lessonsCount,
+        int enrolledCount,
+        List<CourseModuleDto> modules,
+        List<CourseLessonDto> lessons_list,
+        List<CourseLessonDto> lessons
 ) {}

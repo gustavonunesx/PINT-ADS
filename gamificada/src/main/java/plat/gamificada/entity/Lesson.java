@@ -29,4 +29,11 @@ public class Lesson {
 
     @Column(columnDefinition = "TEXT")
     private String questionsJson;
+
+    @Column(columnDefinition = "TEXT")
+    private String videoUrl;
+
+    private boolean published = false;
+
+    private String duration;
 }

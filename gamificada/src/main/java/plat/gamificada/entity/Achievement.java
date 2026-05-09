@@ -14,7 +14,7 @@ public class Achievement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(name = "achievement_key", unique = true, nullable = false)
     private String key;
 
     @Column(nullable = false)

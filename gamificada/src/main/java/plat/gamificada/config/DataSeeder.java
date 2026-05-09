@@ -17,15 +17,12 @@ public class DataSeeder implements ApplicationRunner {
     private final UserRepository userRepo;
     private final TrailRepository trailRepo;
     private final TrailModuleRepository trailModuleRepo;
-    private final CourseRepository courseRepo;
-    private final CourseModuleRepository courseModuleRepo;
-    private final LessonRepository lessonRepo;
     private final AchievementRepository achievementRepo;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (userRepo.count() > 0) return; // já inicializado
+        if (userRepo.count() > 0) return;
 
         // ── Usuários ────────────────────────────────────────────────
         User institution = new User();
@@ -67,9 +64,6 @@ public class DataSeeder implements ApplicationRunner {
 
         // ── Trilhas ─────────────────────────────────────────────────
         seedTrails();
-
-        // ── Cursos ──────────────────────────────────────────────────
-        seedCourses(institution);
     }
 
     private void seedAchievements() {
@@ -102,7 +96,6 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void seedTrails() {
-        // Trilha 1: Programação Web
         Trail web = new Trail();
         web.setTitle("Fundamentos de Programação Web");
         web.setDescription("Aprenda HTML, CSS e JavaScript do zero ao avançado");
@@ -118,7 +111,6 @@ public class DataSeeder implements ApplicationRunner {
         addTrailModule(web, 5, "JavaScript Avançado",   "Promises, async/await e APIs",     false, 300, 0);
         addTrailModule(web, 6, "Quiz Final: Web Dev",   "Avaliação completa de Web Dev",    true,  0,   500);
 
-        // Trilha 2: Banco de Dados
         Trail db = new Trail();
         db.setTitle("Banco de Dados Essencial");
         db.setDescription("SQL, modelagem e boas práticas com MySQL e PostgreSQL");
@@ -133,7 +125,6 @@ public class DataSeeder implements ApplicationRunner {
         addTrailModule(db, 4, "Joins e Subqueries",     "INNER, LEFT, RIGHT JOIN",           false, 300, 0);
         addTrailModule(db, 5, "Índices e Performance",  "Otimização de queries",             false, 350, 0);
 
-        // Trilha 3: Java e Spring
         Trail java = new Trail();
         java.setTitle("Java e Spring Boot");
         java.setDescription("Desenvolvimento backend profissional com Java 21 e Spring Boot");
@@ -160,92 +151,5 @@ public class DataSeeder implements ApplicationRunner {
         m.setXpReward(xpReward);
         m.setBaseXP(baseXP);
         trailModuleRepo.save(m);
-    }
-
-    private void seedCourses(User institution) {
-        // Curso 1: React para Iniciantes
-        Course react = new Course();
-        react.setTitle("React para Iniciantes");
-        react.setDescription("Aprenda React 19 com hooks, estado e componentes");
-        react.setCategory("Frontend");
-        react.setDifficulty("BEGINNER");
-        react.setThumbnailUrl("https://placehold.co/400x200/06B6D4/white?text=React");
-        react.setInstitution(institution);
-        courseRepo.save(react);
-
-        CourseModule m1 = addCourseModule(react, 1, "Fundamentos do React");
-        addLesson(m1, 1, "O que é React?",          "VIDEO", 10, 50);
-        addLesson(m1, 2, "Componentes e JSX",        "VIDEO", 15, 75);
-        addLesson(m1, 3, "Quiz: Fundamentos",        "QUIZ",  5,  100);
-
-        CourseModule m2 = addCourseModule(react, 2, "Hooks e Estado");
-        addLesson(m2, 1, "useState e useEffect",    "VIDEO", 20, 100);
-        addLesson(m2, 2, "useContext e useRef",      "VIDEO", 15, 75);
-        addLesson(m2, 3, "Quiz: Hooks",              "QUIZ",  5,  150);
-
-        CourseModule m3 = addCourseModule(react, 3, "Projeto Final");
-        addLesson(m3, 1, "Criando um CRUD completo", "VIDEO", 30, 200);
-        addLesson(m3, 2, "Deploy e boas práticas",   "TEXT",  10, 100);
-
-        // Curso 2: Python para Dados
-        Course python = new Course();
-        python.setTitle("Python para Ciência de Dados");
-        python.setDescription("Pandas, NumPy, visualização e análise de dados com Python");
-        python.setCategory("Dados");
-        python.setDifficulty("INTERMEDIATE");
-        python.setThumbnailUrl("https://placehold.co/400x200/F59E0B/white?text=Python");
-        python.setInstitution(institution);
-        courseRepo.save(python);
-
-        CourseModule p1 = addCourseModule(python, 1, "Python Essencial");
-        addLesson(p1, 1, "Tipos e estruturas de dados", "VIDEO", 15, 75);
-        addLesson(p1, 2, "Funções e módulos",           "VIDEO", 15, 75);
-        addLesson(p1, 3, "Quiz: Python Básico",         "QUIZ",  5,  100);
-
-        CourseModule p2 = addCourseModule(python, 2, "Pandas e NumPy");
-        addLesson(p2, 1, "Introdução ao Pandas",        "VIDEO", 20, 100);
-        addLesson(p2, 2, "DataFrames e operações",      "VIDEO", 20, 100);
-        addLesson(p2, 3, "NumPy e arrays",              "VIDEO", 15, 75);
-        addLesson(p2, 4, "Quiz: Pandas",                "QUIZ",  5,  150);
-
-        // Curso 3: DevOps
-        Course devops = new Course();
-        devops.setTitle("DevOps na Prática");
-        devops.setDescription("Docker, CI/CD, Kubernetes e boas práticas de entrega contínua");
-        devops.setCategory("Infraestrutura");
-        devops.setDifficulty("ADVANCED");
-        devops.setThumbnailUrl("https://placehold.co/400x200/10B981/white?text=DevOps");
-        devops.setInstitution(institution);
-        courseRepo.save(devops);
-
-        CourseModule d1 = addCourseModule(devops, 1, "Docker Fundamentals");
-        addLesson(d1, 1, "Containers e imagens",        "VIDEO", 20, 100);
-        addLesson(d1, 2, "Docker Compose",              "VIDEO", 20, 100);
-        addLesson(d1, 3, "Quiz: Docker",                "QUIZ",  5,  150);
-
-        CourseModule d2 = addCourseModule(devops, 2, "CI/CD com GitHub Actions");
-        addLesson(d2, 1, "Pipelines básicos",           "VIDEO", 15, 100);
-        addLesson(d2, 2, "Deploy automatizado",         "VIDEO", 20, 150);
-    }
-
-    private CourseModule addCourseModule(Course course, int order, String title) {
-        CourseModule m = new CourseModule();
-        m.setCourse(course);
-        m.setModuleOrder(order);
-        m.setTitle(title);
-        courseModuleRepo.save(m);
-        return m;
-    }
-
-    private void addLesson(CourseModule module, int order, String title, String type,
-                            int durationMinutes, int xpReward) {
-        Lesson l = new Lesson();
-        l.setModule(module);
-        l.setLessonOrder(order);
-        l.setTitle(title);
-        l.setType(type);
-        l.setDurationMinutes(durationMinutes);
-        l.setXpReward(xpReward);
-        lessonRepo.save(l);
     }
 }

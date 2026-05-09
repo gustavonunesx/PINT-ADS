@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByInstitution(User institution);
+    java.util.Optional<Course> findByAccessCode(String accessCode);
+    boolean existsByAccessCode(String accessCode);
 }

@@ -26,6 +26,12 @@ public class Course {
     private String category;
     private String difficulty;
     private String thumbnailUrl;
+    private String color;
+
+    @Column(name = "access_code", unique = true, length = 8, nullable = false)
+    private String accessCode;
+
+    private boolean published = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "institution_id")
