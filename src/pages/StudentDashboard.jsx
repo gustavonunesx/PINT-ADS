@@ -4,12 +4,34 @@ import { user as userApi, courses as coursesApi } from '../api/client'
 // ── Mock data ──────────────────────────────────────────────────────────────
 const MOCK_USER = { name: 'Ana Silva', xp: 3840, level: 12, streak: 7 }
 
-const MY_COURSES = [
-  { id: 'seguranca-info',   name: 'Segurança da Informação', institution: 'Universidade Nova', color: '#3be8b0', glow: 'rgba(59,232,176,0.15)', badge: '🛡️', progress: 87, lessonsTotal: 8, lessonsDone: 7, lastAccess: 'hoje',     nextLesson: 'Certificação Final' },
-  { id: 'compliance-lgpd',  name: 'Compliance & LGPD',        institution: 'Universidade Nova', color: '#63c8ff', glow: 'rgba(99,200,255,0.15)',  badge: '⚖️', progress: 65, lessonsTotal: 6, lessonsDone: 4, lastAccess: 'ontem',    nextLesson: 'DPO e Responsabilidades' },
-  { id: 'boas-praticas-dev', name: 'Boas Práticas Dev',         institution: 'Tech Academy',      color: '#a78bfa', glow: 'rgba(167,139,250,0.15)', badge: '💻', progress: 100,lessonsTotal: 5, lessonsDone: 5, lastAccess: '3 dias',   nextLesson: null },
-  { id: 'soft-skills',      name: 'Soft Skills & Liderança',   institution: 'Universidade Nova', color: '#f87171', glow: 'rgba(248,113,113,0.15)', badge: '🌱', progress: 20, lessonsTotal: 7, lessonsDone: 1, lastAccess: '1 semana', nextLesson: 'Comunicação Não-Violenta' },
+const PALETTE = [
+  { color: '#3be8b0', glow: 'rgba(59,232,176,0.15)',  badge: '🎓' },
+  { color: '#63c8ff', glow: 'rgba(99,200,255,0.15)',  badge: '📚' },
+  { color: '#a78bfa', glow: 'rgba(167,139,250,0.15)', badge: '💻' },
+  { color: '#fbbf24', glow: 'rgba(251,191,36,0.15)',  badge: '⭐' },
+  { color: '#f87171', glow: 'rgba(248,113,113,0.15)', badge: '🌱' },
+  { color: '#34d399', glow: 'rgba(52,211,153,0.15)',  badge: '🔥' },
 ]
+
+function toPalette(id) {
+  const n = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return PALETTE[n % PALETTE.length]
+}
+
+function normalizeCourse(c) {
+  const p = toPalette(c.id)
+  return {
+    ...c,
+    color:        c.color        || p.color,
+    glow:         c.glow         || p.glow,
+    badge:        c.badge        || p.badge,
+    progress:     c.progress     ?? 0,
+    lessonsTotal: c.lessonsTotal ?? c.totalLessons    ?? 0,
+    lessonsDone:  c.lessonsDone  ?? c.completedLessons ?? 0,
+    lastAccess:   c.lastAccess   ?? 'recentemente',
+    nextLesson:   c.nextLesson   ?? null,
+  }
+}
 
 const WEEKLY_DAYS = [
   { day: 'Seg', minutes: 45, done: true  },
@@ -80,7 +102,7 @@ function Tooltip({ text, children }) {
 export default function StudentDashboard({ user, setUser, onNavigate, onLogout }) {
   // Dados dinâmicos vindos do backend
   const [dashboard,   setDashboard]   = useState(null)
-  const [myCourses,   setMyCourses]   = useState(MY_COURSES)
+  const [myCourses,   setMyCourses]   = useState([])
   const [weeklyDays,  setWeeklyDays]  = useState(WEEKLY_DAYS)
   const [recentAct,   setRecentAct]   = useState(RECENT_ACTIVITY)
   const [achievements,setAchievements]= useState(ACHIEVEMENTS)
@@ -97,10 +119,14 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
   const xpPct      = Math.round(((u.xp % xpToNext) / xpToNext) * 100)
   const firstName  = u.name.split(' ')[0]
 
-  const [filter,      setFilter]      = useState('all')
-  const [activeTab,   setActiveTab]   = useState('atividade')
-  const [toast,       setToast]       = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [filter,        setFilter]      = useState('all')
+  const [activeTab,     setActiveTab]   = useState('atividade')
+  const [toast,         setToast]       = useState(null)
+  const [searchQuery,   setSearchQuery] = useState('')
+  const [showEnroll,    setShowEnroll]  = useState(false)
+  const [enrollCode,    setEnrollCode]  = useState('')
+  const [enrollError,   setEnrollError] = useState('')
+  const [enrollLoading, setEnrollLoading] = useState(false)
   const toastTimer = useRef(null)
 
   // Busca dados do dashboard ao montar
@@ -115,7 +141,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
       .catch(() => { /* mantém mock se backend não disponível */ })
 
     coursesApi.list()
-      .then(data => { if (data?.length) setMyCourses(data) })
+      .then(data => { if (Array.isArray(data)) setMyCourses(data.map(normalizeCourse)) })
       .catch(() => {})
 
     userApi.achievements()
@@ -132,7 +158,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
     const matchFilter =
       filter === 'inprogress' ? c.progress > 0 && c.progress < 100 :
       filter === 'done'       ? c.progress === 100 : true
-    const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchSearch = (c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     return matchFilter && matchSearch
   })
 
@@ -163,8 +189,80 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
 
   const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
+  const handleEnroll = async () => {
+    const code = enrollCode.trim().toUpperCase()
+    if (!code) { setEnrollError('Informe o código'); return }
+    setEnrollLoading(true)
+    setEnrollError('')
+    try {
+      await coursesApi.enroll(code)
+      const fresh = await coursesApi.list()
+      if (Array.isArray(fresh)) setMyCourses(fresh.map(normalizeCourse))
+      setShowEnroll(false)
+      setEnrollCode('')
+      showToast('Matriculado com sucesso!')
+    } catch (err) {
+      if (err._status === 404) setEnrollError('Código inválido')
+      else if (err._status === 409) setEnrollError('Você já está matriculado')
+      else setEnrollError('Erro ao entrar no curso')
+    } finally {
+      setEnrollLoading(false)
+    }
+  }
+
   return (
     <div className="sp-root">
+
+      {/* ── ENROLL MODAL ── */}
+      {showEnroll && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={e => e.target === e.currentTarget && setShowEnroll(false)}>
+          <div style={{
+            background: 'rgba(16,16,22,0.98)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px', padding: '2rem', width: '100%', maxWidth: '400px',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>Entrar com código</h2>
+              <button onClick={() => { setShowEnroll(false); setEnrollCode(''); setEnrollError('') }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+              Insira o código de 8 caracteres fornecido pela sua instituição.
+            </p>
+            <input
+              type="text"
+              maxLength={8}
+              value={enrollCode}
+              onChange={e => { setEnrollCode(e.target.value.toUpperCase()); setEnrollError('') }}
+              onKeyDown={e => e.key === 'Enter' && handleEnroll()}
+              placeholder="Ex: S8CC5GLR"
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '0.75rem 1rem',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: '8px', color: '#fff', fontSize: '1.1rem', letterSpacing: '0.15em',
+                textAlign: 'center', outline: 'none', marginBottom: '0.5rem',
+              }}
+              autoFocus
+            />
+            {enrollError && (
+              <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+                {enrollError}
+              </div>
+            )}
+            <button
+              className="btn-primary"
+              style={{ width: '100%', marginTop: '0.5rem', opacity: enrollLoading ? 0.6 : 1 }}
+              onClick={handleEnroll}
+              disabled={enrollLoading}>
+              {enrollLoading ? 'Verificando...' : 'Entrar no curso'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── TOAST ── */}
       {toast && (
@@ -343,6 +441,12 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
                   {label}
                 </button>
               ))}
+              <button
+                className="sp-filter-btn"
+                style={{ color: 'var(--accent)', borderColor: 'var(--accent)', background: 'rgba(59,232,176,0.06)' }}
+                onClick={() => { setEnrollCode(''); setEnrollError(''); setShowEnroll(true) }}>
+                + Entrar com código
+              </button>
             </div>
             <div className="sp-search-wrap">
               <span className="sp-search-icon">🔍</span>

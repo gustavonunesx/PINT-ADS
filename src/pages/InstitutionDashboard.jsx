@@ -1,28 +1,31 @@
 import { useState, useRef, useEffect } from 'react'
 import AppShell from '../components/AppShell'
+import { courses as coursesApi } from '../api/client'
 
-// ── Mock data ──────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
 const MOCK_INSTITUTION = { name: 'Universidade Nova', xp: 0, level: 1, streak: 0 }
 
-const INITIAL_COURSES = [
-  {
-    id: 'c1', name: 'Segurança da Informação', institution: 'Universidade Nova',
-    banner: null, color: '#3be8b0', students: 128, lessons: 8, published: true,
-    lessons_data: [
-      { id: 'l1', title: 'Fundamentos de Segurança', cover: null, duration: '12 min', published: true, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-      { id: 'l2', title: 'Phishing e Engenharia Social', cover: null, duration: '9 min', published: true, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-      { id: 'l3', title: 'Criptografia Avançada', cover: null, duration: '20 min', published: false, videoUrl: null },
-    ]
-  },
-  {
-    id: 'c2', name: 'Compliance & LGPD', institution: 'Universidade Nova',
-    banner: null, color: '#63c8ff', students: 74, lessons: 5, published: true,
-    lessons_data: [
-      { id: 'l1', title: 'Introdução à LGPD', cover: null, duration: '10 min', published: true, videoUrl: 'https://vimeo.com/123456789' },
-      { id: 'l2', title: 'Bases Legais', cover: null, duration: '15 min', published: false, videoUrl: null },
-    ]
-  },
+const PALETTE = [
+  { color: '#3be8b0' }, { color: '#63c8ff' }, { color: '#a78bfa' },
+  { color: '#fbbf24' }, { color: '#f87171' }, { color: '#34d399' },
 ]
+
+function toPalette(id) {
+  const n = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return PALETTE[n % PALETTE.length]
+}
+
+function normalizeCourse(c) {
+  return {
+    ...c,
+    color:        c.color || toPalette(c.id).color,
+    students:     c.students     ?? c.enrolledCount ?? 0,
+    lessons:      c.lessons      ?? c.lessonsCount  ?? 0,
+    published:    c.published    ?? false,
+    lessons_data: c.lessons_data ?? c.lessons_list  ?? [],
+    accessCode:   c.accessCode   ?? null,
+  }
+}
 
 const COLORS = ['#3be8b0', '#63c8ff', '#a78bfa', '#fbbf24', '#f87171', '#34d399', '#fb923c', '#e879f9']
 
@@ -176,7 +179,7 @@ function CreateCourseModal({ onClose, onCreate }) {
     if (!name.trim())        e.name = 'Informe o nome do curso'
     if (!institution.trim()) e.inst = 'Informe o nome da instituição'
     if (Object.keys(e).length) { setErrors(e); return }
-    onCreate({ name, institution, banner, color, id: `c${Date.now()}`, students: 0, lessons: 0, published: false, lessons_data: [] })
+    onCreate({ name, institution, banner, color })
     onClose()
   }
 
@@ -231,7 +234,8 @@ function CreateCourseModal({ onClose, onCreate }) {
 
 function LessonEditor({ course, onClose, onSave }) {
   const [lessons, setLessons] = useState(course.lessons_data || [])
-  const [editing, setEditing]  = useState(null) // lesson id being edited
+  const [editing, setEditing]  = useState(null)
+  const originalLessons = useRef(course.lessons_data || [])
 
   const addLesson = () => {
     const newL = {
@@ -405,7 +409,7 @@ function LessonEditor({ course, onClose, onSave }) {
 
         <div className="modal-footer">
           <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn-primary" onClick={() => { onSave(course.id, lessons); onClose() }}>
+          <button className="btn-primary" onClick={() => { onSave(course.id, lessons, originalLessons.current); onClose() }}>
             Salvar aulas
           </button>
         </div>
@@ -418,21 +422,71 @@ function LessonEditor({ course, onClose, onSave }) {
 
 export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
   const u = user ? { ...MOCK_INSTITUTION, name: user.company || user.name } : MOCK_INSTITUTION
-  const [courses, setCourses]         = useState(INITIAL_COURSES)
+  const [courses, setCourses]         = useState([])
   const [showCreate, setShowCreate]   = useState(false)
   const [editingLessons, setEditing]  = useState(null)
   const [activeTab, setActiveTab]     = useState('courses') // 'courses' | 'stats'
+  const [copiedId, setCopiedId]       = useState(null)
 
-  const totalStudents  = courses.reduce((s, c) => s + c.students, 0)
+  useEffect(() => {
+    coursesApi.list()
+      .then(data => { if (Array.isArray(data)) setCourses(data.map(normalizeCourse)) })
+      .catch(() => {})
+  }, [])
+
+  const totalStudents  = courses.reduce((s, c) => s + (c.students || 0), 0)
   const totalLessons   = courses.reduce((s, c) => s + (c.lessons_data?.length || 0), 0)
   const publishedCount = courses.filter(c => c.published).length
 
-  const addCourse = (course) => setCourses(cs => [...cs, course])
+  const addCourse = async (data) => {
+    try {
+      await coursesApi.create({ name: data.name, institution: data.institution, color: data.color })
+      const fresh = await coursesApi.list()
+      if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
+    } catch (e) {}
+  }
+
+  const copyCode = (course) => {
+    navigator.clipboard.writeText(course.accessCode).then(() => {
+      setCopiedId(course.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }
+
   const togglePublish = (id) => setCourses(cs => cs.map(c => c.id === id ? { ...c, published: !c.published } : c))
-  const saveLessons = (courseId, lessons) => {
-    setCourses(cs => cs.map(c => c.id === courseId
-      ? { ...c, lessons_data: lessons, lessons: lessons.length }
-      : c))
+  const saveLessons = async (courseId, lessons, originalLessons = []) => {
+    const isTemp = (id) => String(id).startsWith('l')
+
+    const newLessons      = lessons.filter(l => isTemp(l.id))
+    const existingLessons = lessons.filter(l => !isTemp(l.id))
+    const keptIds         = new Set(existingLessons.map(l => String(l.id)))
+    const removedLessons  = originalLessons.filter(l => !isTemp(l.id) && !keptIds.has(String(l.id)))
+
+    const lessonPayload = (l) => ({
+      title:     l.title,
+      duration:  l.duration,
+      videoUrl:  l.videoUrl,
+      published: l.published,
+    })
+
+    for (const lesson of newLessons) {
+      try { await coursesApi.addLesson(courseId, lessonPayload(lesson)) } catch {}
+    }
+    for (const lesson of existingLessons) {
+      try { await coursesApi.updateLesson(courseId, lesson.id, lessonPayload(lesson)) } catch {}
+    }
+    for (const lesson of removedLessons) {
+      try { await coursesApi.deleteLesson(courseId, lesson.id) } catch {}
+    }
+
+    try {
+      const fresh = await coursesApi.list()
+      if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
+    } catch {
+      setCourses(cs => cs.map(c => c.id === courseId
+        ? { ...c, lessons_data: lessons, lessons: lessons.length }
+        : c))
+    }
   }
 
   return (
@@ -500,6 +554,28 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
                   <span>📚 {course.lessons_data?.length || 0} aulas</span>
                   <span>👥 {course.students} alunos</span>
                 </div>
+
+                {/* Access code */}
+                {course.accessCode && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.5rem 0' }}>
+                    <span style={{
+                      fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700,
+                      letterSpacing: '0.12em', color: course.color,
+                      background: `${course.color}12`, border: `1px solid ${course.color}30`,
+                      borderRadius: '6px', padding: '3px 8px',
+                    }}>{course.accessCode}</span>
+                    <button
+                      onClick={() => copyCode(course)}
+                      style={{
+                        fontSize: '0.72rem', padding: '3px 8px', borderRadius: '6px',
+                        border: `1px solid ${course.color}30`, background: `${course.color}0a`,
+                        color: copiedId === course.id ? course.color : 'var(--text-muted)',
+                        cursor: 'pointer', transition: 'color 0.2s',
+                      }}>
+                      {copiedId === course.id ? '✓ Copiado' : 'Copiar'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Lesson previews */}
                 {course.lessons_data && course.lessons_data.length > 0 && (

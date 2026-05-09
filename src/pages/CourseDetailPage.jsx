@@ -1,144 +1,58 @@
 import { useState, useEffect } from 'react'
+import { courses as coursesApi } from '../api/client'
 
-// Course data
-const COURSES_DATA = {
-  'seguranca-info': {
-    id: 'seguranca-info',
-    name: 'Segurança da Informação',
-    institution: 'Universidade Nova',
-    color: '#3be8b0',
-    glow: 'rgba(59,232,176,0.15)',
-    badge: '🛡️',
-    progress: 87,
-    lessonsTotal: 8,
-    lessonsDone: 7,
-    instructor: 'Dr. Carlos Mendes',
-    totalDuration: '4h 30min',
-    certificate: true,
-    xpReward: 850,
-    modules: [
-      {
-        name: 'Módulo 1 — Fundamentos',
-        lessons: [
-          { id: 'l1', title: 'Introdução à Segurança', duration: '12 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-          { id: 'l2', title: 'Ameaças e Vulnerabilidades', duration: '18 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-          { id: 'l3', title: 'Criptografia Básica', duration: '22 min', status: 'done', videoUrl: 'https://vimeo.com/123456789' },
-        ],
-      },
-      {
-        name: 'Módulo 2 — Aplicações Práticas',
-        lessons: [
-          { id: 'l4', title: 'Criptografia Avançada', duration: '25 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-          { id: 'l5', title: 'Gestão de Incidentes', duration: '20 min', status: 'done', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-          { id: 'l6', title: 'Análise de Riscos', duration: '28 min', status: 'done', videoUrl: null },
-          { id: 'l7', title: 'Normas ISO 27001', duration: '30 min', status: 'done', videoUrl: null },
-        ],
-      },
-      {
-        name: 'Módulo 3 — Certificação',
-        lessons: [{ id: 'l8', title: 'Certificação Final', duration: '35 min', status: 'available', videoUrl: null }],
-      },
-    ],
-  },
-  'compliance-lgpd': {
-    id: 'compliance-lgpd',
-    name: 'Compliance & LGPD',
-    institution: 'Universidade Nova',
-    color: '#63c8ff',
-    glow: 'rgba(99,200,255,0.15)',
-    badge: '⚖️',
-    progress: 65,
-    lessonsTotal: 6,
-    lessonsDone: 4,
-    instructor: 'Dra. Ana Paula Silva',
-    totalDuration: '3h 15min',
-    certificate: true,
-    xpReward: 720,
-    modules: [
-      {
-        name: 'Módulo 1 — Fundamentos',
-        lessons: [
-          { id: 'l1', title: 'O que é LGPD', duration: '15 min', status: 'done' },
-          { id: 'l2', title: 'Princípios da Lei', duration: '20 min', status: 'done' },
-        ],
-      },
-      {
-        name: 'Módulo 2 — Implementação',
-        lessons: [
-          { id: 'l3', title: 'Mapeamento de Dados', duration: '25 min', status: 'done' },
-          { id: 'l4', title: 'DPO e Responsabilidades', duration: '22 min', status: 'done' },
-          { id: 'l5', title: 'Políticas de Privacidade', duration: '28 min', status: 'available' },
-          { id: 'l6', title: 'Avaliação Final', duration: '30 min', status: 'locked' },
-        ],
-      },
-    ],
-  },
-  'boas-praticas-dev': {
-    id: 'boas-praticas-dev',
-    name: 'Boas Práticas Dev',
-    institution: 'Tech Academy',
-    color: '#a78bfa',
-    glow: 'rgba(167,139,250,0.15)',
-    badge: '💻',
-    progress: 100,
-    lessonsTotal: 5,
-    lessonsDone: 5,
-    instructor: 'João Pedro Costa',
-    totalDuration: '2h 45min',
-    certificate: true,
-    xpReward: 650,
-    modules: [
-      {
-        name: 'Módulo 1 — Clean Code',
-        lessons: [
-          { id: 'l1', title: 'Fundamentos Clean Code', duration: '18 min', status: 'done' },
-          { id: 'l2', title: 'Naming Conventions', duration: '15 min', status: 'done' },
-          { id: 'l3', title: 'Refactoring', duration: '22 min', status: 'done' },
-        ],
-      },
-      {
-        name: 'Módulo 2 — Padrões',
-        lessons: [
-          { id: 'l4', title: 'Design Patterns', duration: '30 min', status: 'done' },
-          { id: 'l5', title: 'Code Review', duration: '20 min', status: 'done' },
-        ],
-      },
-    ],
-  },
-  'soft-skills': {
-    id: 'soft-skills',
-    name: 'Soft Skills & Liderança',
-    institution: 'Universidade Nova',
-    color: '#f87171',
-    glow: 'rgba(248,113,113,0.15)',
-    badge: '🌱',
-    progress: 20,
-    lessonsTotal: 7,
-    lessonsDone: 1,
-    instructor: 'Maria Fernanda Alves',
-    totalDuration: '5h 00min',
-    certificate: true,
-    xpReward: 920,
-    modules: [
-      {
-        name: 'Módulo 1 — Comunicação',
-        lessons: [
-          { id: 'l1', title: 'Comunicação Efetiva', duration: '20 min', status: 'done' },
-          { id: 'l2', title: 'Comunicação Não-Violenta', duration: '25 min', status: 'available' },
-          { id: 'l3', title: 'Feedback Construtivo', duration: '22 min', status: 'locked' },
-        ],
-      },
-      {
-        name: 'Módulo 2 — Liderança',
-        lessons: [
-          { id: 'l4', title: 'Estilos de Liderança', duration: '28 min', status: 'locked' },
-          { id: 'l5', title: 'Gestão de Equipes', duration: '30 min', status: 'locked' },
-          { id: 'l6', title: 'Delegação', duration: '18 min', status: 'locked' },
-          { id: 'l7', title: 'Avaliação Final', duration: '35 min', status: 'locked' },
-        ],
-      },
-    ],
-  },
+const PALETTE = [
+  { color: '#3be8b0', glow: 'rgba(59,232,176,0.15)',  badge: '🎓' },
+  { color: '#63c8ff', glow: 'rgba(99,200,255,0.15)',  badge: '📚' },
+  { color: '#a78bfa', glow: 'rgba(167,139,250,0.15)', badge: '💻' },
+  { color: '#fbbf24', glow: 'rgba(251,191,36,0.15)',  badge: '⭐' },
+  { color: '#f87171', glow: 'rgba(248,113,113,0.15)', badge: '🌱' },
+  { color: '#34d399', glow: 'rgba(52,211,153,0.15)',  badge: '🔥' },
+]
+
+function toPalette(id) {
+  const n = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return PALETTE[n % PALETTE.length]
+}
+
+function normalizeCourseDetail(raw) {
+  const p = toPalette(raw.id)
+  const flatLessons = (raw.lessons || []).map(l => ({
+    id:       String(l.id),
+    title:    l.title    ?? 'Aula',
+    duration: l.duration ?? '—',
+    status:   l.status   ?? 'available',
+    videoUrl: l.videoUrl ?? l.video_url ?? null,
+  }))
+  const modules = raw.modules?.length
+    ? raw.modules.map(m => ({
+        name: m.name,
+        lessons: (m.lessons || []).map(l => ({
+          id:       String(l.id),
+          title:    l.title    ?? 'Aula',
+          duration: l.duration ?? '—',
+          status:   l.status   ?? 'available',
+          videoUrl: l.videoUrl ?? l.video_url ?? null,
+        })),
+      }))
+    : [{ name: 'Aulas do curso', lessons: flatLessons }]
+
+  return {
+    id:            raw.id,
+    name:          raw.name          ?? '',
+    institution:   raw.institution   ?? raw.institutionName ?? '',
+    color:         raw.color         || p.color,
+    glow:          raw.glow          || p.glow,
+    badge:         raw.badge         || p.badge,
+    progress:      raw.progress      ?? 0,
+    lessonsTotal:  raw.lessonsTotal  ?? raw.totalLessons    ?? flatLessons.length,
+    lessonsDone:   raw.lessonsDone   ?? raw.completedLessons ?? 0,
+    instructor:    raw.instructor    ?? raw.instructorName  ?? '—',
+    totalDuration: raw.totalDuration ?? raw.duration        ?? '—',
+    certificate:   raw.certificate   ?? false,
+    xpReward:      raw.xpReward      ?? raw.xp              ?? 0,
+    modules,
+  }
 }
 
 // Progress Ring component
@@ -182,22 +96,31 @@ function ProgressRing({ pct, color, size = 140 }) {
 }
 
 export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
-  const courseId = ctx?.courseId || 'seguranca-info'
-  const course = COURSES_DATA[courseId] || COURSES_DATA['seguranca-info']
+  const courseId  = ctx?.courseId
   const firstName = user?.name?.split(' ')[0] || 'Aluno'
 
-  // Find next available lesson
-  const findNextLesson = () => {
-    for (const mod of course.modules) {
-      for (const lesson of mod.lessons) {
-        if (lesson.status === 'available') return lesson
-      }
-    }
-    return course.modules[0]?.lessons[0]
-  }
-  const nextLesson = findNextLesson()
+  const [course,  setCourse]  = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [denied,  setDenied]  = useState(false)
 
   useEffect(() => {
+    if (!courseId) { onNavigate('my-courses'); return }
+    coursesApi.get(courseId)
+      .then(data => { setCourse(normalizeCourseDetail(data)); setLoading(false) })
+      .catch(err => {
+        setLoading(false)
+        const msg = err?.message ?? err?.error ?? ''
+        if (err?._status === 403 || err?._status === 500 || msg.toLowerCase().includes('acesso negado')) {
+          setDenied(true)
+        } else {
+          onNavigate('my-courses')
+        }
+      })
+  }, [courseId])
+
+  // Must be declared before any early return (rules of hooks)
+  useEffect(() => {
+    if (!course) return
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -211,7 +134,38 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
     )
     document.querySelectorAll('.cd-reveal').forEach((el) => obs.observe(el))
     return () => obs.disconnect()
-  }, [])
+  }, [course])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)' }}>
+        Carregando curso...
+      </div>
+    )
+  }
+
+  if (denied) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1rem', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '2.5rem' }}>🔒</div>
+        <div style={{ fontSize: '1.1rem', color: '#fff' }}>Acesso negado</div>
+        <div>Você não está matriculado neste curso.</div>
+        <button className="btn-primary" onClick={() => onNavigate('my-courses')}>Ir para Meus Cursos</button>
+      </div>
+    )
+  }
+
+  if (!course) return null
+
+  const findNextLesson = () => {
+    for (const mod of course.modules) {
+      for (const lesson of mod.lessons) {
+        if (lesson.status === 'available') return lesson
+      }
+    }
+    return course.modules[0]?.lessons[0]
+  }
+  const nextLesson = findNextLesson()
 
   return (
     <div className="cd-root" style={{ '--cc': course.color, '--cg': course.glow }}>
@@ -272,7 +226,7 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
               <h2 className="cd-section-title cd-reveal">Aulas do curso</h2>
               <div className="cd-modules">
                 {course.modules.map((mod, mi) => (
-                  <div key={mod.name} className="cd-module cd-reveal" data-delay={mi * 80}>
+                  <div key={mod.name ?? `module-${mi}`} className="cd-module cd-reveal" data-delay={mi * 80}>
                     <div className="cd-module-header">{mod.name}</div>
                     <div className="cd-lessons-list">
                       {mod.lessons.map((lesson, li) => (

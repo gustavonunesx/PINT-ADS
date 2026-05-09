@@ -11,7 +11,7 @@ async function request(path, options = {}) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Erro desconhecido' }))
-    throw err
+    throw { ...err, _status: res.status }
   }
   if (res.status === 204) return null
   return res.json()
@@ -52,8 +52,14 @@ export const courses = {
   addLesson: (courseId, data) =>
     request(`/courses/${courseId}/lessons`, { method: 'POST', body: JSON.stringify(data) }),
 
+  updateLesson: (courseId, lessonId, data) =>
+    request(`/courses/${courseId}/lessons/${lessonId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
   deleteLesson: (courseId, lessonId) =>
     request(`/courses/${courseId}/lessons/${lessonId}`, { method: 'DELETE' }),
+
+  enroll: (code) =>
+    request('/courses/enroll', { method: 'POST', body: JSON.stringify({ code }) }),
 }
 
 // ── Trails ────────────────────────────────────────────────────────────────────
