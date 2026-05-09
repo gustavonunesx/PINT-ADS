@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { user as userApi, courses as coursesApi } from '../api/client'
+import { user as userApi, courses as coursesApi, leaderboard as leaderboardApi } from '../api/client'
 
 // ── Mock data ──────────────────────────────────────────────────────────────
 const MOCK_USER = { name: 'Ana Silva', xp: 3840, level: 12, streak: 7 }
@@ -19,17 +19,20 @@ function toPalette(id) {
 }
 
 function normalizeCourse(c) {
-  const p = toPalette(c.id)
+  const p            = toPalette(c.id)
+  const lessonsTotal = c.lessonsTotal ?? c.totalLessons    ?? 0
+  const lessonsDone  = c.lessonsDone  ?? c.completedLessons ?? 0
+  const progress     = c.progress ?? (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
   return {
     ...c,
-    color:        c.color        || p.color,
-    glow:         c.glow         || p.glow,
-    badge:        c.badge        || p.badge,
-    progress:     c.progress     ?? 0,
-    lessonsTotal: c.lessonsTotal ?? c.totalLessons    ?? 0,
-    lessonsDone:  c.lessonsDone  ?? c.completedLessons ?? 0,
-    lastAccess:   c.lastAccess   ?? 'recentemente',
-    nextLesson:   c.nextLesson   ?? null,
+    color:        c.color || p.color,
+    glow:         c.glow  || p.glow,
+    badge:        c.badge || p.badge,
+    progress,
+    lessonsTotal,
+    lessonsDone,
+    lastAccess:   c.lastAccess ?? 'recentemente',
+    nextLesson:   c.nextLesson ?? null,
   }
 }
 
@@ -58,6 +61,30 @@ const ACHIEVEMENTS = [
   { icon: '🏆', label: 'Top 3 ranking',      unlocked: false },
   { icon: '🌟', label: 'Trilha completa',    unlocked: false },
 ]
+
+// ── Activity helpers ───────────────────────────────────────────────────────
+
+const ACT_COLORS = ['#3be8b0','#63c8ff','#a78bfa','#fbbf24','#f87171','#34d399']
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d    = new Date(dateStr)
+  const diff = Math.floor((Date.now() - d) / (1000 * 60 * 60 * 24))
+  if (diff === 0) return 'hoje'
+  if (diff === 1) return 'ontem'
+  if (diff <  7)  return `há ${diff} dias`
+  return d.toLocaleDateString('pt-BR')
+}
+
+function normalizeActivity(items) {
+  return items.map((item, i) => ({
+    time:   formatDate(item.date),
+    text:   item.description ?? 'Atividade concluída',
+    xp:     `+${item.xpEarned ?? 0} XP`,
+    color:  ACT_COLORS[i % ACT_COLORS.length],
+    course: '',
+  }))
+}
 
 // ── XP Ring ────────────────────────────────────────────────────────────────
 function XPRing({ pct, color, size = 120 }) {
@@ -106,6 +133,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
   const [weeklyDays,  setWeeklyDays]  = useState(WEEKLY_DAYS)
   const [recentAct,   setRecentAct]   = useState(RECENT_ACTIVITY)
   const [achievements,setAchievements]= useState(ACHIEVEMENTS)
+  const [myRank,      setMyRank]      = useState(null)
 
   // Dados do usuário: prioriza o que vem do backend, fallback para mock
   const u = {
@@ -134,11 +162,10 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
     userApi.dashboard()
       .then(data => {
         if (data.weeklyStats)    setWeeklyDays(data.weeklyStats)
-        if (data.recentActivity) setRecentAct(data.recentActivity)
-        // Atualiza o user global com XP/level/streak vindos do backend
+        if (data.recentActivity?.length) setRecentAct(normalizeActivity(data.recentActivity))
         if (data.user && setUser) setUser(prev => ({ ...prev, ...data.user }))
       })
-      .catch(() => { /* mantém mock se backend não disponível */ })
+      .catch(() => {})
 
     coursesApi.list()
       .then(data => { if (Array.isArray(data)) setMyCourses(data.map(normalizeCourse)) })
@@ -146,6 +173,15 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
 
     userApi.achievements()
       .then(data => { if (data?.length) setAchievements(data) })
+      .catch(() => {})
+
+    leaderboardApi.get('all-time', 'individual')
+      .then(data => {
+        if (Array.isArray(data)) {
+          const me = data.find(e => e.userId === user?.id)
+          if (me) setMyRank(me.rank)
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -611,10 +647,10 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
 
           <div className="sp-rank-teaser sp-reveal" data-delay="180">
             <div className="sp-rank-left">
-              <div className="sp-rank-pos">#14</div>
+              <div className="sp-rank-pos">{myRank != null ? `#${myRank}` : '—'}</div>
               <div>
                 <div className="sp-rank-label">Sua posição no ranking global</div>
-                <div className="sp-rank-sub">Top 5% · {u.xp.toLocaleString('pt-BR')} XP acumulados esta semana</div>
+                <div className="sp-rank-sub">{u.xp.toLocaleString('pt-BR')} XP acumulados</div>
               </div>
             </div>
             <button className="btn-primary" onClick={() => onNavigate('leaderboard')}>Ver ranking →</button>

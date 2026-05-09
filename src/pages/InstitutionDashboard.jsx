@@ -18,12 +18,16 @@ function toPalette(id) {
 function normalizeCourse(c) {
   return {
     ...c,
-    color:        c.color || toPalette(c.id).color,
+    color:        c.color        || toPalette(c.id).color,
     students:     c.students     ?? c.enrolledCount ?? 0,
     lessons:      c.lessons      ?? c.lessonsCount  ?? 0,
     published:    c.published    ?? false,
     lessons_data: c.lessons_data ?? c.lessons_list  ?? [],
     accessCode:   c.accessCode   ?? null,
+    description:  c.description  ?? '',
+    category:     c.category     ?? '',
+    difficulty:   c.difficulty   ?? '',
+    thumbnailUrl: c.thumbnailUrl ?? c.thumbnail_url ?? null,
   }
 }
 
@@ -167,19 +171,25 @@ function CoverUpload({ cover, onUpload, small }) {
   )
 }
 
+const DIFFICULTY_OPTIONS = ['Iniciante', 'Intermédio', 'Avançado']
+
 function CreateCourseModal({ onClose, onCreate }) {
-  const [name, setName]           = useState('')
-  const [institution, setInst]    = useState('')
-  const [banner, setBanner]       = useState(null)
-  const [color, setColor]         = useState(COLORS[0])
-  const [errors, setErrors]       = useState({})
+  const [name, setName]               = useState('')
+  const [institution, setInst]        = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory]       = useState('')
+  const [difficulty, setDifficulty]   = useState('')
+  const [thumbnailUrl, setThumbnail]  = useState('')
+  const [banner, setBanner]           = useState(null)
+  const [color, setColor]             = useState(COLORS[0])
+  const [errors, setErrors]           = useState({})
 
   const submit = () => {
     const e = {}
     if (!name.trim())        e.name = 'Informe o nome do curso'
     if (!institution.trim()) e.inst = 'Informe o nome da instituição'
     if (Object.keys(e).length) { setErrors(e); return }
-    onCreate({ name, institution, banner, color })
+    onCreate({ name, institution, description, category, difficulty, thumbnailUrl: thumbnailUrl || null, banner, color })
     onClose()
   }
 
@@ -204,6 +214,36 @@ function CreateCourseModal({ onClose, onCreate }) {
             <input className="form-input" type="text" placeholder="Ex: Segurança da Informação"
               value={name} onChange={e => { setName(e.target.value); setErrors(er => ({ ...er, name: '' })) }} />
             {errors.name && <span className="form-error">{errors.name}</span>}
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Descrição <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+            <textarea className="form-input" rows={3} placeholder="Descreva o conteúdo e objetivos do curso..."
+              value={description} onChange={e => setDescription(e.target.value)}
+              style={{ resize: 'vertical', minHeight: '72px' }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Categoria <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+              <input className="form-input" type="text" placeholder="Ex: Tecnologia"
+                value={category} onChange={e => setCategory(e.target.value)} />
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Dificuldade <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+              <select className="form-input" value={difficulty} onChange={e => setDifficulty(e.target.value)}
+                style={{ cursor: 'pointer' }}>
+                <option value="">Selecionar...</option>
+                {DIFFICULTY_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">URL da thumbnail <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+            <input className="form-input" type="text" placeholder="https://exemplo.com/imagem.jpg"
+              value={thumbnailUrl} onChange={e => setThumbnail(e.target.value)} />
           </div>
 
           <div className="form-group">
@@ -440,7 +480,15 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
 
   const addCourse = async (data) => {
     try {
-      await coursesApi.create({ name: data.name, institution: data.institution, color: data.color })
+      await coursesApi.create({
+        name:         data.name,
+        institution:  data.institution,
+        color:        data.color,
+        description:  data.description  || null,
+        category:     data.category     || null,
+        difficulty:   data.difficulty   || null,
+        thumbnailUrl: data.thumbnailUrl || null,
+      })
       const fresh = await coursesApi.list()
       if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
     } catch (e) {}

@@ -34,25 +34,20 @@ function toPalette(id) {
 
 function normalizeCourse(raw) {
   const p = toPalette(raw.id)
-  const flatLessons = (raw.lessons || []).map(l => ({
+  const mapLesson = (l) => ({
     id:          String(l.id),
     title:       l.title       ?? 'Aula',
     duration:    l.duration    ?? '10 min',
     status:      l.status      ?? 'available',
     videoUrl:    l.videoUrl    ?? l.video_url ?? null,
     description: l.description ?? '',
-  }))
+  })
+  const flatLessons = (raw.lessons || []).map(mapLesson)
+  const flatById    = Object.fromEntries(flatLessons.map(l => [l.id, l]))
   const modules = raw.modules?.length
     ? raw.modules.map(m => ({
         name: m.name,
-        lessons: (m.lessons || []).map(l => ({
-          id:          String(l.id),
-          title:       l.title       ?? 'Aula',
-          duration:    l.duration    ?? '10 min',
-          status:      l.status      ?? 'available',
-          videoUrl:    l.videoUrl    ?? l.video_url ?? null,
-          description: l.description ?? '',
-        })),
+        lessons: (m.lessons || []).map(l => flatById[String(l.id)] ?? mapLesson(l)),
       }))
     : [{ name: 'Aulas do curso', lessons: flatLessons }]
 
@@ -65,6 +60,56 @@ function normalizeCourse(raw) {
     badge:       raw.badge       || p.badge,
     modules,
   }
+}
+
+// ── Confetti ───────────────────────────────────────────────────────────────
+
+function launchConfetti() {
+  const canvas = document.createElement('canvas')
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999'
+  document.body.appendChild(canvas)
+  const ctx = canvas.getContext('2d')
+  canvas.width  = window.innerWidth
+  canvas.height = window.innerHeight
+
+  const colors = ['#3be8b0','#63c8ff','#a78bfa','#fbbf24','#f87171','#34d399','#ffffff','#fb923c']
+  const pieces = Array.from({ length: 140 }, () => {
+    const angle = Math.PI + Math.random() * Math.PI
+    const speed = Math.random() * 10 + 4
+    return {
+      x:     canvas.width  * (0.3 + Math.random() * 0.4),
+      y:     canvas.height * 0.65,
+      vx:    Math.cos(angle) * speed,
+      vy:    Math.sin(angle) * speed,
+      r:     Math.random() * 5 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot:   Math.random() * Math.PI * 2,
+      rotV:  (Math.random() - 0.5) * 0.25,
+      g:     0.25 + Math.random() * 0.15,
+      rect:  Math.random() < 0.6,
+    }
+  })
+
+  let frame = 0
+  function tick() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    frame++
+    const fade = frame > 150 ? Math.max(0, 1 - (frame - 150) / 50) : 1
+    pieces.forEach(p => {
+      p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.rotV
+      ctx.save()
+      ctx.globalAlpha = fade
+      ctx.fillStyle   = p.color
+      ctx.translate(p.x, p.y)
+      ctx.rotate(p.rot)
+      if (p.rect) ctx.fillRect(-p.r, -p.r * 0.4, p.r * 2, p.r * 0.8)
+      else { ctx.beginPath(); ctx.arc(0, 0, p.r * 0.55, 0, Math.PI * 2); ctx.fill() }
+      ctx.restore()
+    })
+    if (frame < 200) requestAnimationFrame(tick)
+    else canvas.remove()
+  }
+  requestAnimationFrame(tick)
 }
 
 // ── Video Player ───────────────────────────────────────────────────────────
@@ -200,15 +245,57 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
   }
 
   const handleMarkComplete = async () => {
-    showToast(`Aula "${currentLesson.title}" marcada como concluída!`)
+    if (currentLesson.status === 'done') return
+
+    const courseWillComplete = allLessons.every(
+      l => l.id === currentLesson.id || l.status === 'done'
+    )
+
+    setCourse(prev => ({
+      ...prev,
+      modules: prev.modules.map(mod => ({
+        ...mod,
+        lessons: mod.lessons.map(l =>
+          l.id === currentLesson.id ? { ...l, status: 'done' } : l
+        ),
+      })),
+    }))
     setProgress(100)
     setCurrentTime(formatTime(videoDuration))
+    launchConfetti()
+
+    if (courseWillComplete) {
+      showToast(`Curso "${course.name}" concluído! 🎓`, '#fbbf24')
+    } else {
+      showToast(`Aula "${currentLesson.title}" concluída! 🎉`)
+    }
+
     try {
       const res = await activities.completeLesson(currentLesson.id)
       if (res && setUser) {
-        setUser(prev => ({ ...prev, xp: res.totalXp ?? prev.xp, level: res.level ?? prev.level }))
+        setUser(prev => ({
+          ...prev,
+          xp:    res.totalXp ?? prev.xp,
+          level: res.level   ?? prev.level,
+        }))
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error('completeLesson error:', err)
+      showToast('Erro ao salvar progresso no servidor.', '#f87171')
+    }
+
+    if (courseWillComplete) {
+      try {
+        const res = await activities.completeCourse(course.id)
+        if (res && setUser) {
+          setUser(prev => ({
+            ...prev,
+            xp:    res.totalXp ?? prev.xp,
+            level: res.level   ?? prev.level,
+          }))
+        }
+      } catch (_) {}
+    }
   }
 
   // ── Render ──
@@ -261,11 +348,16 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
             )}
 
             <div className="cp-actions">
-              <button className="cp-action-btn primary" style={{ background: course.color }} onClick={handleMarkComplete}>
+              <button
+                className={`cp-action-btn primary${currentLesson.status === 'done' ? ' done' : ''}`}
+                style={{ background: currentLesson.status === 'done' ? '#22c55e' : course.color }}
+                onClick={handleMarkComplete}
+                disabled={currentLesson.status === 'done'}
+              >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M3 8l4 4 6-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                Marcar como concluída
+                {currentLesson.status === 'done' ? 'Aula concluída' : 'Marcar como concluída'}
               </button>
 
               <div className="cp-nav-btns">
@@ -378,6 +470,14 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
                         <span className="cp-sidebar-lesson-title">{lesson.title}</span>
                         <span className="cp-sidebar-lesson-duration">{lesson.duration}</span>
                       </div>
+                      {lesson.status === 'done' && (
+                        <div className="cp-sidebar-lesson-done">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <circle cx="8" cy="8" r="7" fill={course.color} fillOpacity="0.2" stroke={course.color} strokeWidth="1.2"/>
+                            <path d="M5 8l2.5 2.5L11 5.5" stroke={course.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

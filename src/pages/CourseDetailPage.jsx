@@ -17,25 +17,25 @@ function toPalette(id) {
 
 function normalizeCourseDetail(raw) {
   const p = toPalette(raw.id)
-  const flatLessons = (raw.lessons || []).map(l => ({
+  const mapLesson = (l) => ({
     id:       String(l.id),
     title:    l.title    ?? 'Aula',
     duration: l.duration ?? '—',
     status:   l.status   ?? 'available',
     videoUrl: l.videoUrl ?? l.video_url ?? null,
-  }))
+  })
+  const flatLessons = (raw.lessons || []).map(mapLesson)
+  const flatById    = Object.fromEntries(flatLessons.map(l => [l.id, l]))
   const modules = raw.modules?.length
     ? raw.modules.map(m => ({
         name: m.name,
-        lessons: (m.lessons || []).map(l => ({
-          id:       String(l.id),
-          title:    l.title    ?? 'Aula',
-          duration: l.duration ?? '—',
-          status:   l.status   ?? 'available',
-          videoUrl: l.videoUrl ?? l.video_url ?? null,
-        })),
+        lessons: (m.lessons || []).map(l => flatById[String(l.id)] ?? mapLesson(l)),
       }))
     : [{ name: 'Aulas do curso', lessons: flatLessons }]
+
+  const lessonsTotal = raw.lessonsTotal ?? raw.totalLessons ?? flatLessons.length
+  const lessonsDone  = flatLessons.filter(l => l.status === 'done').length
+  const progress     = raw.progress ?? (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
 
   return {
     id:            raw.id,
@@ -44,9 +44,9 @@ function normalizeCourseDetail(raw) {
     color:         raw.color         || p.color,
     glow:          raw.glow          || p.glow,
     badge:         raw.badge         || p.badge,
-    progress:      raw.progress      ?? 0,
-    lessonsTotal:  raw.lessonsTotal  ?? raw.totalLessons    ?? flatLessons.length,
-    lessonsDone:   raw.lessonsDone   ?? raw.completedLessons ?? 0,
+    progress,
+    lessonsTotal,
+    lessonsDone,
     instructor:    raw.instructor    ?? raw.instructorName  ?? '—',
     totalDuration: raw.totalDuration ?? raw.duration        ?? '—',
     certificate:   raw.certificate   ?? false,

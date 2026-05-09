@@ -78,6 +78,9 @@ export const activities = {
 
   completeLesson: (lessonId) =>
     request(`/activities/lessons/${lessonId}/complete`, { method: 'POST', body: '{}' }),
+
+  completeCourse: (courseId) =>
+    request(`/activities/courses/${courseId}/complete`, { method: 'POST', body: '{}' }),
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
