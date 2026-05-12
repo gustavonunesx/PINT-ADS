@@ -6,6 +6,8 @@ public record TrailModuleDto(
         String description,
         int moduleOrder,
         int xpReward,
+        String type,
+        String duration,
         boolean quiz,
         boolean locked,
         boolean completed,

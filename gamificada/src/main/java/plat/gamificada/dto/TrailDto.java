@@ -9,6 +9,10 @@ public record TrailDto(
         String category,
         String difficulty,
         String thumbnailUrl,
+        String color,
+        String badge,
+        int xpTotal,
+        int xpEarned,
         int totalModules,
         int completedModules,
         List<TrailModuleDto> modules

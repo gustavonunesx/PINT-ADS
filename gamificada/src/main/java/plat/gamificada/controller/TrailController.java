@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import plat.gamificada.dto.TrailDto;
 import plat.gamificada.entity.User;
 import plat.gamificada.repository.UserRepository;
-import plat.gamificada.service.TrailService;
+import plat.gamificada.service.CourseService;
 import plat.gamificada.util.UserResolver;
 
 import java.util.List;
@@ -16,14 +16,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TrailController {
 
-    private final TrailService trailService;
+    private final CourseService courseService;
     private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<TrailDto>> listAll(
             @RequestHeader(value = "Authorization", required = false) String auth) {
         User user = UserResolver.resolve(auth, userRepository);
-        return ResponseEntity.ok(trailService.listAll(user));
+        return ResponseEntity.ok(courseService.listAsTrails(user));
     }
 
     @GetMapping("/{id}")
@@ -31,6 +31,6 @@ public class TrailController {
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String auth) {
         User user = UserResolver.resolve(auth, userRepository);
-        return ResponseEntity.ok(trailService.getById(id, user));
+        return ResponseEntity.ok(courseService.getAsTrail(id, user));
     }
 }

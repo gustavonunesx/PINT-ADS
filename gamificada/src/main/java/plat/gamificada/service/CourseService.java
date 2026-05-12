@@ -244,4 +244,78 @@ public class CourseService {
                 allLessons
         );
     }
+
+    public List<TrailDto> listAsTrails(User user) {
+        return courseRepository.findAll().stream()
+                .map(c -> toCourseTrailDto(c, user))
+                .toList();
+    }
+
+    public TrailDto getAsTrail(Long courseId, User user) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Trilha não encontrada: " + courseId));
+        return toCourseTrailDto(course, user);
+    }
+
+    private TrailDto toCourseTrailDto(Course course, User user) {
+        List<UserLessonProgress> progresses = lessonProgressRepo.findByUserAndCourseId(user, course.getId());
+        Map<Long, UserLessonProgress> progressMap = progresses.stream()
+                .collect(Collectors.toMap(p -> p.getLesson().getId(), p -> p));
+
+        List<TrailModuleDto> moduleDtos = new ArrayList<>();
+        int order = 0;
+
+        for (CourseModule module : course.getModules()) {
+            for (Lesson lesson : module.getLessons()) {
+                UserLessonProgress prog = progressMap.get(lesson.getId());
+                boolean done = prog != null && prog.isCompleted();
+                String type = (lesson.getVideoUrl() != null && !lesson.getVideoUrl().isBlank())
+                        ? "video" : "lesson";
+                int xp = lesson.getXpReward() > 0 ? lesson.getXpReward() : 100;
+
+                moduleDtos.add(new TrailModuleDto(
+                        lesson.getId(),
+                        lesson.getTitle(),
+                        null,
+                        ++order,
+                        xp,
+                        type,
+                        lesson.getDuration(),
+                        false,
+                        false,
+                        done,
+                        prog != null ? prog.getCorrectAnswers() : 0,
+                        prog != null ? prog.getTotalQuestions() : 0
+                ));
+            }
+        }
+
+        int xpTotal = moduleDtos.stream().mapToInt(TrailModuleDto::xpReward).sum();
+        int xpEarned = moduleDtos.stream()
+                .filter(TrailModuleDto::completed)
+                .mapToInt(TrailModuleDto::xpReward)
+                .sum();
+
+        String institution = course.getInstitution() != null
+                ? (course.getInstitution().getCompanyName() != null
+                    ? course.getInstitution().getCompanyName()
+                    : course.getInstitution().getName())
+                : null;
+
+        return new TrailDto(
+                course.getId(),
+                course.getTitle(),
+                course.getDescription(),
+                institution,
+                null,
+                course.getThumbnailUrl(),
+                course.getColor(),
+                null,
+                xpTotal,
+                xpEarned,
+                moduleDtos.size(),
+                (int) moduleDtos.stream().filter(TrailModuleDto::completed).count(),
+                moduleDtos
+        );
+    }
 }

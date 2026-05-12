@@ -57,6 +57,8 @@ public class TrailService {
                     m.getDescription(),
                     m.getModuleOrder(),
                     m.getXpReward(),
+                    m.isQuiz() ? "quiz" : "lesson",
+                    null,
                     m.isQuiz(),
                     locked,
                     completed,
@@ -66,6 +68,11 @@ public class TrailService {
         }
 
         long completedCount = moduleDtos.stream().filter(TrailModuleDto::completed).count();
+        int xpTotal = moduleDtos.stream().mapToInt(TrailModuleDto::xpReward).sum();
+        int xpEarned = moduleDtos.stream()
+                .filter(TrailModuleDto::completed)
+                .mapToInt(TrailModuleDto::xpReward)
+                .sum();
 
         return new TrailDto(
                 trail.getId(),
@@ -74,6 +81,10 @@ public class TrailService {
                 trail.getCategory(),
                 trail.getDifficulty(),
                 trail.getThumbnailUrl(),
+                trail.getColor(),
+                trail.getBadge(),
+                xpTotal,
+                xpEarned,
                 modules.size(),
                 (int) completedCount,
                 moduleDtos

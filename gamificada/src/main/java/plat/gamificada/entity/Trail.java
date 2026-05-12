@@ -26,6 +26,8 @@ public class Trail {
     private String category;
     private String difficulty;
     private String thumbnailUrl;
+    private String color;
+    private String badge;
 
     @OneToMany(mappedBy = "trail", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @OrderBy("moduleOrder ASC")
