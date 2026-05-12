@@ -461,7 +461,7 @@ function LessonEditor({ course, onClose, onSave }) {
 // ── Main page ──────────────────────────────────────────────────────────────
 
 export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
-  const u = user ? { ...MOCK_INSTITUTION, name: user.company || user.name } : MOCK_INSTITUTION
+  const u = user ? { ...MOCK_INSTITUTION, name: user.company || user.name, type: user.type } : MOCK_INSTITUTION
   const [courses, setCourses]         = useState([])
   const [showCreate, setShowCreate]   = useState(false)
   const [editingLessons, setEditing]  = useState(null)

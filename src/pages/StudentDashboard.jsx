@@ -328,6 +328,9 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
           <div className="sp-nav-right">
             <div className="sp-nav-xp">⚡ {u.xp.toLocaleString('pt-BR')} XP</div>
             <div className="sp-nav-avatar">{firstName[0]}</div>
+            {user?.type === 'institution' && (
+              <button className="nav-signup" onClick={() => onNavigate('institution')}>Dashboard</button>
+            )}
             <button className="nav-login" onClick={onLogout}>Sair</button>
           </div>
         </div>

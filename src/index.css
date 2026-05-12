@@ -565,7 +565,7 @@ footer { border-top: 1px solid var(--border); }
 .trail-row:hover { background:var(--surface-2); border-color:var(--trail-color); box-shadow:0 4px 24px var(--trail-glow); }
 .trail-row-badge { font-size:2rem; flex-shrink:0; }
 .trail-row-info  { flex:1; min-width:0; }
-.trail-row-title { font-family:'Playfair Display',serif; font-size:1rem; font-weight:600; letter-spacing:-0.01em; margin-bottom:0.2rem; }
+.trail-row-title { font-family:'Playfair Display',serif; font-size:1rem; font-weight:600; letter-spacing:-0.01em; margin-bottom:0.2rem; color:#fff; }
 .trail-row-desc  { font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .trail-row-meta  { font-size:0.72rem; color:var(--text-muted); }
 .trail-row-right { text-align:right; flex-shrink:0; min-width:90px; }

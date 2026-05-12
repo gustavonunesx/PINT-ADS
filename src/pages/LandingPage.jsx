@@ -137,6 +137,7 @@ export default function LandingPage({ user, onNavigate, onLogout }) {
             {user ? (
               <>
                 <span className="nav-user-name">Olá, {user.name.split(' ')[0]}</span>
+                <button className="nav-signup" onClick={() => onNavigate(user.type === 'institution' ? 'institution' : 'dashboard')}>Dashboard</button>
                 <button className="nav-login" onClick={onLogout}>Sair</button>
               </>
             ) : (

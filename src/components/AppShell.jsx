@@ -42,7 +42,7 @@ export default function AppShell({ user, onNavigate, onLogout, activePage, child
       <aside className="sidebar">
 
         {/* Logo */}
-        <div className="sidebar-logo" onClick={() => onNavigate('dashboard')}>
+        <div className="sidebar-logo" onClick={() => onNavigate(user?.type === 'institution' ? 'institution' : 'dashboard')}>
           <div className="sidebar-logo-icon">G</div>
           {!collapsed && (
             <span className="sidebar-logo-text">Gamify<em>Pro</em></span>
@@ -55,7 +55,7 @@ export default function AppShell({ user, onNavigate, onLogout, activePage, child
             <button
               key={item.id}
               className={`sidebar-item ${activePage === item.id ? 'active' : ''}`}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => onNavigate(item.id === 'dashboard' && user?.type === 'institution' ? 'institution' : item.id)}
               title={item.label}
             >
               <span className="sidebar-item-icon">{item.icon}</span>
