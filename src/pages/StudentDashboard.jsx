@@ -20,9 +20,14 @@ function toPalette(id) {
 
 function normalizeCourse(c) {
   const p            = toPalette(c.id)
-  const lessonsTotal = c.lessonsTotal ?? c.totalLessons    ?? 0
-  const lessonsDone  = c.lessonsDone  ?? c.completedLessons ?? 0
-  const progress     = c.progress ?? (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
+  const lessons      = Array.isArray(c.lessons) ? c.lessons : []
+  const lessonsTotal = c.lessonsTotal ?? c.totalLessons ?? c.lessonsCount ?? lessons.length ?? 0
+  const lessonsDone  = c.lessonsDone ?? c.completedLessons ??
+                       lessons.filter(l => l.status === 'done' || l.completed).length
+  const rawProgress  = c.progress ?? c.progressPercent ?? c.completionRate ?? null
+  const progress     = rawProgress != null
+    ? Number(rawProgress)
+    : (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
   return {
     ...c,
     color:        c.color || p.color,
@@ -167,10 +172,6 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
       })
       .catch(() => {})
 
-    coursesApi.list()
-      .then(data => { if (Array.isArray(data)) setMyCourses(data.map(normalizeCourse)) })
-      .catch(() => {})
-
     userApi.achievements()
       .then(data => { if (data?.length) setAchievements(data) })
       .catch(() => {})
@@ -185,16 +186,27 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    coursesApi.list('all', searchQuery)
+      .then(data => {
+        if (Array.isArray(data)) {
+          if (data.length > 0) console.log('[courses raw]', data[0])
+          setMyCourses(data.map(normalizeCourse))
+        }
+      })
+      .catch(() => {})
+  }, [searchQuery])
+
   const totalMin   = weeklyDays.reduce((s, d) => s + d.minutes, 0)
   const maxMin     = Math.max(...weeklyDays.map(d => d.minutes), 1)
   const activeDays = weeklyDays.filter(d => d.done).length
-  const nextCourse = myCourses.find(c => c.progress > 0 && c.progress < 100)
+  const nextCourse = myCourses.find(c => c.progress < 100)
 
   const filtered = myCourses.filter(c => {
     const matchFilter =
-      filter === 'inprogress' ? c.progress > 0 && c.progress < 100 :
+      filter === 'inprogress' ? c.progress < 100 :
       filter === 'done'       ? c.progress === 100 : true
-    const matchSearch = (c.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    const matchSearch = (c.name ?? '').toLowerCase().includes((searchQuery ?? '').toLowerCase())
     return matchFilter && matchSearch
   })
 
@@ -357,7 +369,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
             </div>
             <div className="hero-stats">
               {[
-                { v: myCourses.filter(c => c.progress > 0 && c.progress < 100).length, l: 'Em andamento' },
+                { v: myCourses.filter(c => c.progress < 100).length, l: 'Em andamento' },
                 { v: myCourses.filter(c => c.progress === 100).length,                 l: 'Concluídos'   },
                 { v: myCourses.reduce((s, c) => s + c.lessonsDone, 0),                 l: 'Aulas feitas' },
                 { v: 3, l: 'Certificados' },

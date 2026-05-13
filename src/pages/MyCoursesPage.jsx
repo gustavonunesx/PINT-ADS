@@ -8,11 +8,15 @@ function toPalette(id) {
 }
 
 function normalizeCourse(c) {
-  const color       = c.color || toPalette(c.id)
-  const lessons     = Array.isArray(c.lessons) ? c.lessons : []
-  const lessonsTotal = c.lessonsCount ?? lessons.length ?? 0
-  const lessonsDone  = lessons.filter(l => l.status === 'done').length
-  const progress     = c.progress ?? (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
+  const color        = c.color || toPalette(c.id)
+  const lessons      = Array.isArray(c.lessons) ? c.lessons : []
+  const lessonsTotal = c.lessonsCount ?? c.totalLessons ?? c.lessonsTotal ?? lessons.length ?? 0
+  const lessonsDone  = c.lessonsDone ?? c.completedLessons ??
+                       lessons.filter(l => l.status === 'done' || l.completed).length
+  const rawProgress  = c.progress ?? c.progressPercent ?? c.completionRate ?? null
+  const progress     = rawProgress != null
+    ? Number(rawProgress)
+    : (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
   return {
     id:          c.id,
     name:        c.name,
@@ -34,19 +38,22 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
   const firstName = user?.name?.split(' ')[0] || 'Aluno'
 
   useEffect(() => {
-    coursesApi.list()
-      .then(data => { if (Array.isArray(data)) setCourses(data.map(normalizeCourse)) })
+    setLoading(true)
+    coursesApi.list('all', searchQuery)
+      .then(data => {
+        if (Array.isArray(data)) {
+          if (data.length > 0) console.log('[my-courses raw]', data[0])
+          setCourses(data.map(normalizeCourse))
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [searchQuery])
 
-  const filtered = courses.filter((c) => {
+  const filtered = courses.filter(c => {
     const matchFilter =
-      filter === 'inprogress'
-        ? c.progress > 0 && c.progress < 100
-        : filter === 'done'
-          ? c.progress === 100
-          : true
+      filter === 'inprogress' ? c.progress < 100 :
+      filter === 'done'       ? c.progress === 100 : true
     const matchSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchFilter && matchSearch
   })
