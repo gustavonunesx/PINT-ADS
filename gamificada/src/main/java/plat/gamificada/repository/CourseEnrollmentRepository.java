@@ -9,6 +9,8 @@ import java.util.List;
 
 public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollment, Long> {
     List<CourseEnrollment> findByStudent(User student);
+    List<CourseEnrollment> findByCourse(Course course);
+    List<CourseEnrollment> findByCourseIn(List<Course> courses);
     boolean existsByCourseAndStudent(Course course, User student);
     long countByCourse(Course course);
 }

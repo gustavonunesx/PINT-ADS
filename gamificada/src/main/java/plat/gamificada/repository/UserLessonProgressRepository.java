@@ -2,6 +2,7 @@ package plat.gamificada.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import plat.gamificada.entity.Lesson;
 import plat.gamificada.entity.User;
 import plat.gamificada.entity.UserLessonProgress;
@@ -19,4 +20,10 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
 
     @Query("SELECT COUNT(p) FROM UserLessonProgress p WHERE p.user = :user AND p.lesson.module.course.id = :courseId AND p.completed = true")
     long countCompletedByUserAndCourse(User user, Long courseId);
+
+    @Query("SELECT COUNT(p) FROM UserLessonProgress p WHERE p.lesson.module.course.institution = :institution AND p.completed = true")
+    long countCompletedByInstitution(@Param("institution") User institution);
+
+    @Query("SELECT COALESCE(SUM(p.lesson.xpReward), 0) FROM UserLessonProgress p WHERE p.lesson.module.course.institution = :institution AND p.completed = true")
+    long sumXpByInstitution(@Param("institution") User institution);
 }
