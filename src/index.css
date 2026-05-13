@@ -949,7 +949,8 @@ footer { border-top: 1px solid var(--border); }
 
 /* Course cards */
 .sp-courses-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:1rem; }
-.sp-course-card { padding:1.4rem; display:flex; flex-direction:column; gap:0.35rem; position:relative; overflow:hidden; transition:border-color 0.22s, box-shadow 0.22s, transform 0.2s; }
+.sp-course-card { padding:1.4rem; display:flex; flex-direction:column; gap:0.35rem; position:relative; overflow:hidden; transition:border-color 0.22s, box-shadow 0.22s, transform 0.2s; animation:sp-card-in 0.45s cubic-bezier(0.16,1,0.3,1) var(--sp-delay,0ms) both; }
+@keyframes sp-card-in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
 .sp-course-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--cc); opacity:0.8; }
 .sp-course-card:hover { border-color:var(--cc); box-shadow:0 10px 36px var(--cg); transform:translateY(-3px); }
 .sp-cc-top       { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:0.4rem; }
@@ -1192,6 +1193,11 @@ footer { border-top: 1px solid var(--border); }
   gap: 1rem;
 }
 
+@keyframes mc-card-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
 /* Course Card */
 .mc-course-card {
   position: relative; display: flex;
@@ -1199,6 +1205,7 @@ footer { border-top: 1px solid var(--border); }
   border-radius: var(--radius); overflow: hidden;
   transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  animation: mc-card-in 0.45s cubic-bezier(0.16,1,0.3,1) var(--mc-delay, 0ms) both;
 }
 .mc-course-card:hover {
   transform: translateY(-3px);

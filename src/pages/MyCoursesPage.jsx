@@ -1,79 +1,46 @@
 import { useState, useEffect } from 'react'
+import { courses as coursesApi } from '../api/client'
 
-// Mock courses data
-const COURSES = [
-  {
-    id: 'seguranca-info',
-    name: 'Segurança da Informação',
-    institution: 'Universidade Nova',
-    color: '#3be8b0',
-    glow: 'rgba(59,232,176,0.15)',
-    badge: '🛡️',
-    progress: 87,
-    lessonsTotal: 8,
-    lessonsDone: 7,
-    lastAccess: 'Acessado hoje',
-  },
-  {
-    id: 'compliance-lgpd',
-    name: 'Compliance & LGPD',
-    institution: 'Universidade Nova',
-    color: '#63c8ff',
-    glow: 'rgba(99,200,255,0.15)',
-    badge: '⚖️',
-    progress: 65,
-    lessonsTotal: 6,
-    lessonsDone: 4,
-    lastAccess: 'Acessado ontem',
-  },
-  {
-    id: 'boas-praticas-dev',
-    name: 'Boas Práticas Dev',
-    institution: 'Tech Academy',
-    color: '#a78bfa',
-    glow: 'rgba(167,139,250,0.15)',
-    badge: '💻',
-    progress: 100,
-    lessonsTotal: 5,
-    lessonsDone: 5,
-    lastAccess: 'Acessado há 3 dias',
-  },
-  {
-    id: 'soft-skills',
-    name: 'Soft Skills & Liderança',
-    institution: 'Universidade Nova',
-    color: '#f87171',
-    glow: 'rgba(248,113,113,0.15)',
-    badge: '🌱',
-    progress: 20,
-    lessonsTotal: 7,
-    lessonsDone: 1,
-    lastAccess: 'Acessado há 1 semana',
-  },
-]
+const PALETTE = ['#3be8b0','#63c8ff','#a78bfa','#fbbf24','#f87171','#34d399','#fb923c','#e879f9']
+function toPalette(id) {
+  const n = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return PALETTE[n % PALETTE.length]
+}
+
+function normalizeCourse(c) {
+  const color       = c.color || toPalette(c.id)
+  const lessons     = Array.isArray(c.lessons) ? c.lessons : []
+  const lessonsTotal = c.lessonsCount ?? lessons.length ?? 0
+  const lessonsDone  = lessons.filter(l => l.status === 'done').length
+  const progress     = c.progress ?? (lessonsTotal > 0 ? Math.round((lessonsDone / lessonsTotal) * 100) : 0)
+  return {
+    id:          c.id,
+    name:        c.name,
+    institution: c.institution ?? c.institutionName ?? '',
+    color,
+    glow:        `${color}26`,
+    badge:       c.badge ?? '🎓',
+    progress,
+    lessonsTotal,
+    lessonsDone,
+  }
+}
 
 export default function MyCoursesPage({ user, onNavigate, onLogout }) {
-  const [filter, setFilter] = useState('all')
+  const [courses, setCourses]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [filter, setFilter]       = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const firstName = user?.name?.split(' ')[0] || 'Aluno'
 
   useEffect(() => {
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            setTimeout(() => e.target.classList.add('mc-visible'), Number(e.target.dataset.delay || 0))
-            obs.unobserve(e.target)
-          }
-        })
-      },
-      { threshold: 0.1 }
-    )
-    document.querySelectorAll('.mc-reveal').forEach((el) => obs.observe(el))
-    return () => obs.disconnect()
-  }, [filter, searchQuery])
+    coursesApi.list()
+      .then(data => { if (Array.isArray(data)) setCourses(data.map(normalizeCourse)) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
-  const filtered = COURSES.filter((c) => {
+  const filtered = courses.filter((c) => {
     const matchFilter =
       filter === 'inprogress'
         ? c.progress > 0 && c.progress < 100
@@ -116,7 +83,7 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
       <section className="mc-content">
         <div className="mc-wrapper">
           {/* Filters + Search */}
-          <div className="mc-filters-row mc-reveal">
+          <div className="mc-filters-row">
             <div className="mc-filters">
               {[
                 ['all', 'Todos'],
@@ -155,8 +122,10 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
           </div>
 
           {/* Courses Grid */}
-          {filtered.length === 0 ? (
-            <div className="mc-empty mc-reveal">
+          {loading ? (
+            <div className="mc-empty" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>A carregar cursos…</div>
+          ) : filtered.length === 0 ? (
+            <div className="mc-empty">
               <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
                 <circle cx="20" cy="20" r="14" stroke="var(--text-muted)" strokeWidth="2" />
                 <path d="M30 30l10 10" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
@@ -168,9 +137,8 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
               {filtered.map((course, i) => (
                 <div
                   key={course.id}
-                  className="mc-course-card mc-reveal"
-                  data-delay={i * 60}
-                  style={{ '--cc': course.color, '--cg': course.glow }}
+                  className="mc-course-card"
+                  style={{ '--cc': course.color, '--cg': course.glow, '--mc-delay': `${i * 60}ms` }}
                 >
                   {/* Left accent border */}
                   <div className="mc-card-accent" style={{ background: course.color }} />
@@ -202,10 +170,7 @@ export default function MyCoursesPage({ user, onNavigate, onLogout }) {
 
                     {/* Stats row */}
                     <div className="mc-card-stats">
-                      <span>
-                        {course.lessonsDone}/{course.lessonsTotal} aulas
-                      </span>
-                      <span>{course.lastAccess}</span>
+                      <span>{course.lessonsDone}/{course.lessonsTotal} aulas</span>
                     </div>
 
                     {/* CTA Button */}

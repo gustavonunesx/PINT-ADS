@@ -92,4 +92,5 @@ export const leaderboard = {
 // ── Institution ───────────────────────────────────────────────────────────────
 export const institution = {
   stats: () => request('/institution/stats'),
+  courseStats: (courseId) => request(`/institution/courses/${courseId}/stats`),
 }

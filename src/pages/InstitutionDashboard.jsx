@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import AppShell from '../components/AppShell'
-import { courses as coursesApi } from '../api/client'
+import { courses as coursesApi, institution as institutionApi } from '../api/client'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const MOCK_INSTITUTION = { name: 'Universidade Nova', xp: 0, level: 1, streak: 0 }
@@ -467,12 +467,34 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
   const [editingLessons, setEditing]  = useState(null)
   const [activeTab, setActiveTab]     = useState('courses') // 'courses' | 'stats'
   const [copiedId, setCopiedId]       = useState(null)
+  const [globalStats, setGlobalStats] = useState(null)
+  const [courseStatsMap, setCourseStatsMap] = useState({}) // courseId → CourseStatsDto
+  const [statsLoading, setStatsLoading]     = useState(false)
 
   useEffect(() => {
     coursesApi.list()
       .then(data => { if (Array.isArray(data)) setCourses(data.map(normalizeCourse)) })
       .catch(() => {})
+    institutionApi.stats()
+      .then(s => setGlobalStats(s))
+      .catch(() => {})
   }, [])
+
+  // Lazy-load per-course stats when the stats tab opens
+  useEffect(() => {
+    if (activeTab !== 'stats' || courses.length === 0) return
+    const missing = courses.filter(c => !courseStatsMap[c.id])
+    if (missing.length === 0) return
+    setStatsLoading(true)
+    Promise.allSettled(
+      missing.map(c => institutionApi.courseStats(c.id).then(s => [c.id, s]))
+    ).then(results => {
+      const map = {}
+      results.forEach(r => { if (r.status === 'fulfilled') { const [id, s] = r.value; map[id] = s } })
+      setCourseStatsMap(prev => ({ ...prev, ...map }))
+      setStatsLoading(false)
+    })
+  }, [activeTab, courses])
 
   const totalStudents  = courses.reduce((s, c) => s + (c.students || 0), 0)
   const totalLessons   = courses.reduce((s, c) => s + (c.lessons_data?.length || 0), 0)
@@ -554,10 +576,10 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
       {/* Top metrics */}
       <div className="inst-metrics">
         {[
-          { label: 'Cursos publicados', value: publishedCount, sub: `${courses.length} no total`, color: '#3be8b0', icon: '◈' },
-          { label: 'Alunos inscritos',  value: totalStudents,  sub: 'todos os cursos',            color: '#63c8ff', icon: '⬡' },
-          { label: 'Aulas criadas',     value: totalLessons,   sub: 'em todos os cursos',         color: '#a78bfa', icon: '▶' },
-          { label: 'Taxa de conclusão', value: '78%',          sub: 'média geral',                color: '#fbbf24', icon: '◉' },
+          { label: 'Cursos publicados',  value: publishedCount,                                                             sub: `${courses.length} no total`,    color: '#3be8b0', icon: '◈' },
+          { label: 'Alunos inscritos',   value: globalStats?.totalStudents       ?? totalStudents,                          sub: 'nos cursos desta instituição',   color: '#63c8ff', icon: '⬡' },
+          { label: 'Aulas concluídas',   value: globalStats?.totalLessonsCompleted != null ? globalStats.totalLessonsCompleted.toLocaleString('pt-BR') : totalLessons, sub: 'por todos os alunos', color: '#a78bfa', icon: '▶' },
+          { label: 'XP distribuído',     value: globalStats?.totalXpDistributed  != null ? globalStats.totalXpDistributed.toLocaleString('pt-BR')  : '—',          sub: 'acumulado pelos alunos',        color: '#fbbf24', icon: '◉' },
         ].map(m => (
           <div className="qm-card" key={m.label}>
             <div className="qm-icon" style={{ color: m.color }}>{m.icon}</div>
@@ -676,39 +698,85 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
       )}
 
       {activeTab === 'stats' && (
-        <div className="inst-stats-grid">
-          <div className="inst-stat-card">
-            <div className="inst-stat-title">Engajamento por curso</div>
-            {courses.map(c => (
-              <div key={c.id} className="inst-stat-row">
-                <div className="inst-stat-row-name">{c.name}</div>
-                <div className="inst-stat-bar-wrap">
-                  <div className="inst-stat-bar">
-                    <div className="inst-stat-bar-fill" style={{ width: `${Math.round((c.students / Math.max(totalStudents, 1)) * 100)}%`, background: c.color }} />
-                  </div>
-                  <span style={{ color: c.color, fontSize: '0.78rem', minWidth: 30, textAlign: 'right' }}>{c.students}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
+          {/* Per-course student progress */}
           <div className="inst-stat-card">
-            <div className="inst-stat-title">Status das aulas</div>
+            <div className="inst-stat-title">Avanço dos alunos por curso</div>
+            {statsLoading && courses.some(c => !courseStatsMap[c.id]) && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.8rem' }}>A carregar dados…</div>
+            )}
             {courses.map(c => {
-              const pub = c.lessons_data?.filter(l => l.published).length || 0
-              const total = c.lessons_data?.length || 0
+              const cs = courseStatsMap[c.id]
+              const pct = cs?.avgProgress ?? 0
+              const completionRate = cs && cs.enrolledCount > 0
+                ? Math.round((cs.completedCount / cs.enrolledCount) * 100)
+                : 0
               return (
                 <div key={c.id} className="inst-stat-row">
-                  <div className="inst-stat-row-name">{c.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.82rem', color: c.color, fontWeight: 600 }}>{c.name}</span>
+                    {cs ? (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        {cs.enrolledCount} alunos · {cs.completedCount} concluíram ({completionRate}%)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>—</span>
+                    )}
+                  </div>
                   <div className="inst-stat-bar-wrap">
                     <div className="inst-stat-bar">
-                      <div className="inst-stat-bar-fill" style={{ width: total ? `${(pub / total) * 100}%` : '0%', background: c.color }} />
+                      <div className="inst-stat-bar-fill" style={{ width: `${pct}%`, background: c.color }} />
                     </div>
-                    <span style={{ color: c.color, fontSize: '0.78rem', minWidth: 50, textAlign: 'right' }}>{pub}/{total} pub.</span>
+                    <span style={{ color: c.color, fontSize: '0.78rem', minWidth: 40, textAlign: 'right' }}>
+                      {cs ? `${pct}%` : '—'}
+                    </span>
                   </div>
                 </div>
               )
             })}
+          </div>
+
+          {/* Two-column: publication status + enrolled counts */}
+          <div className="inst-stats-grid">
+            <div className="inst-stat-card">
+              <div className="inst-stat-title">Alunos inscritos por curso</div>
+              {courses.map(c => {
+                const cs = courseStatsMap[c.id]
+                const maxEnrolled = Math.max(...courses.map(x => courseStatsMap[x.id]?.enrolledCount ?? x.students ?? 0), 1)
+                const enrolled = cs?.enrolledCount ?? c.students ?? 0
+                return (
+                  <div key={c.id} className="inst-stat-row">
+                    <div className="inst-stat-row-name">{c.name}</div>
+                    <div className="inst-stat-bar-wrap">
+                      <div className="inst-stat-bar">
+                        <div className="inst-stat-bar-fill" style={{ width: `${Math.round((enrolled / maxEnrolled) * 100)}%`, background: c.color }} />
+                      </div>
+                      <span style={{ color: c.color, fontSize: '0.78rem', minWidth: 30, textAlign: 'right' }}>{enrolled}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="inst-stat-card">
+              <div className="inst-stat-title">Status das aulas</div>
+              {courses.map(c => {
+                const pub   = c.lessons_data?.filter(l => l.published).length || 0
+                const total = c.lessons_data?.length || 0
+                return (
+                  <div key={c.id} className="inst-stat-row">
+                    <div className="inst-stat-row-name">{c.name}</div>
+                    <div className="inst-stat-bar-wrap">
+                      <div className="inst-stat-bar">
+                        <div className="inst-stat-bar-fill" style={{ width: total ? `${(pub / total) * 100}%` : '0%', background: c.color }} />
+                      </div>
+                      <span style={{ color: c.color, fontSize: '0.78rem', minWidth: 50, textAlign: 'right' }}>{pub}/{total} pub.</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}

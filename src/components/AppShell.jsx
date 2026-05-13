@@ -51,7 +51,7 @@ export default function AppShell({ user, onNavigate, onLogout, activePage, child
 
         {/* Nav links */}
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map(item => (
+          {NAV_ITEMS.filter(item => !(user?.type === 'institution' && item.id === 'trail')).map(item => (
             <button
               key={item.id}
               className={`sidebar-item ${activePage === item.id ? 'active' : ''}`}

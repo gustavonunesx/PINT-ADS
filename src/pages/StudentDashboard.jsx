@@ -511,8 +511,8 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
           ) : (
             <div className="sp-courses-grid">
               {filtered.map((course, i) => (
-                <div key={course.id} className="sp-course-card sp-reveal" data-delay={i * 80}
-                  style={{ '--cc': course.color, '--cg': course.glow }}>
+                <div key={course.id} className="sp-course-card"
+                  style={{ '--cc': course.color, '--cg': course.glow, '--sp-delay': `${i * 80}ms` }}>
                   <div className="sp-cc-top">
                     <span className="sp-cc-badge">{course.badge}</span>
                     <div className="sp-cc-top-right">
@@ -638,14 +638,17 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
           </div>
 
           <div className="sp-ach-grid sp-reveal" data-delay="80">
-            {achievements.map(a => (
-              <div key={a.label} className={`sp-ach ${a.unlocked ? 'unlocked' : 'locked'}`}
-                onClick={() => a.unlocked && showToast(`🏅 "${a.label}" desbloqueada!`)}>
-                <div className="sp-ach-icon">{a.icon}</div>
-                <div className="sp-ach-label">{a.label}</div>
-                {!a.unlocked && <div className="sp-ach-lock">🔒</div>}
-              </div>
-            ))}
+            {achievements.map((a, i) => {
+              const label = a.label ?? a.name ?? `achievement-${i}`
+              return (
+                <div key={a.id ?? label} className={`sp-ach ${a.unlocked ? 'unlocked' : 'locked'}`}
+                  onClick={() => a.unlocked && showToast(`🏅 "${label}" desbloqueada!`)}>
+                  <div className="sp-ach-icon">{a.icon}</div>
+                  <div className="sp-ach-label">{label}</div>
+                  {!a.unlocked && <div className="sp-ach-lock">🔒</div>}
+                </div>
+              )
+            })}
           </div>
 
           <div className="sp-rank-teaser sp-reveal" data-delay="180">
