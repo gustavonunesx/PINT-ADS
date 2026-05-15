@@ -772,8 +772,8 @@ footer { border-top: 1px solid var(--border); }
 .inst-lesson-num   { font-size:0.65rem; font-weight:600; min-width:16px; }
 .inst-lesson-title { flex:1; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .inst-lesson-more  { font-size:0.68rem; color:var(--text-muted); padding-left:1.2rem; }
-.inst-course-actions { display:flex; gap:0.5rem; margin-top:auto; }
-.inst-btn-lessons, .inst-btn-publish { flex:1; padding:0.5rem 0.7rem; border-radius:7px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:'Inter',sans-serif; font-size:0.78rem; cursor:pointer; transition:all 0.18s; text-align:center; }
+.inst-course-actions { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; margin-top:auto; }
+.inst-btn-lessons, .inst-btn-publish { padding:0.5rem 0.4rem; border-radius:7px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-family:'Inter',sans-serif; font-size:0.74rem; cursor:pointer; transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .inst-btn-lessons:hover, .inst-btn-publish:hover { opacity:.85; }
 .inst-add-card { border:1px dashed rgba(255,255,255,0.1); background:transparent; cursor:pointer; min-height:200px; align-items:center; justify-content:center; }
 .inst-add-card:hover { border-color:var(--accent); background:rgba(59,232,176,0.03); }

@@ -41,6 +41,7 @@ function normalizeCourse(raw) {
     status:      l.status      ?? 'available',
     videoUrl:    l.videoUrl    ?? l.video_url ?? null,
     description: l.description ?? '',
+    xp:          l.xp          ?? l.xpReward  ?? 0,
   })
   const flatLessons = (raw.lessons || []).map(mapLesson)
   const flatById    = Object.fromEntries(flatLessons.map(l => [l.id, l]))
@@ -156,6 +157,101 @@ function VideoPlayer({ videoUrl, color }) {
   return <video className="cp-video-direct" src={id} controls />
 }
 
+// ── Course Complete Modal ──────────────────────────────────────────────────
+
+function CourseCompleteModal({ course, xpEarned, leveledUp, newLevel, onClose }) {
+  const [show, setShow] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setShow(true), 80); return () => clearTimeout(t) }, [])
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1rem',
+    }}>
+      <div style={{
+        background: 'linear-gradient(145deg, rgba(16,16,24,0.98), rgba(20,20,32,0.98))',
+        border: `1px solid ${course.color}40`,
+        borderRadius: '20px',
+        padding: '2.5rem 2rem',
+        maxWidth: '420px', width: '100%',
+        textAlign: 'center',
+        boxShadow: `0 0 60px ${course.color}20, 0 24px 60px rgba(0,0,0,0.6)`,
+        transform: show ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.97)',
+        opacity: show ? 1 : 0,
+        transition: 'transform 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease',
+      }}>
+        {/* Icon */}
+        <div style={{
+          width: 80, height: 80, borderRadius: '50%', margin: '0 auto 1.25rem',
+          background: `${course.color}18`,
+          border: `2px solid ${course.color}50`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '2.2rem',
+          boxShadow: `0 0 32px ${course.color}30`,
+        }}>
+          🎓
+        </div>
+
+        {/* Title */}
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.12em', color: course.color, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Curso concluído
+        </div>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#fff', marginBottom: '0.35rem', lineHeight: 1.3 }}>
+          {course.name}
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.75rem' }}>
+          {course.institution}
+        </p>
+
+        {/* XP Badge */}
+        {xpEarned > 0 && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+            background: `${course.color}14`,
+            border: `1px solid ${course.color}35`,
+            borderRadius: '999px',
+            padding: '0.55rem 1.25rem',
+            marginBottom: leveledUp ? '0.75rem' : '1.75rem',
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>⚡</span>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: course.color }}>+{xpEarned} XP</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ganhos</span>
+          </div>
+        )}
+
+        {/* Level up */}
+        {leveledUp && (
+          <div style={{
+            background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
+            borderRadius: '10px', padding: '0.6rem 1rem', marginBottom: '1.75rem',
+            fontSize: '0.9rem', color: '#fbbf24', fontWeight: 600,
+          }}>
+            🏆 Subiu para o nível {newLevel}!
+          </div>
+        )}
+
+        {/* Button */}
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', padding: '0.85rem',
+            background: course.color, border: 'none', borderRadius: '10px',
+            color: '#000', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+            boxShadow: `0 0 24px ${course.color}40`,
+            transition: 'opacity 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          Ver meus cursos →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, ctx }) {
@@ -163,13 +259,14 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
   const lessonId = ctx?.lessonId
 
   // ── All hooks declared before any early return ──
-  const [course,        setCourse]       = useState(null)
-  const [loading,       setLoading]      = useState(true)
-  const [isPlaying,     setIsPlaying]    = useState(false)
-  const [progress,      setProgress]     = useState(0)
-  const [currentTime,   setCurrentTime]  = useState('0:00')
-  const [activeTab,     setActiveTab]    = useState('descricao')
-  const [toast,         setToast]        = useState(null)
+  const [course,          setCourse]        = useState(null)
+  const [loading,         setLoading]       = useState(true)
+  const [isPlaying,       setIsPlaying]     = useState(false)
+  const [progress,        setProgress]      = useState(0)
+  const [currentTime,     setCurrentTime]   = useState('0:00')
+  const [activeTab,       setActiveTab]     = useState('descricao')
+  const [toast,           setToast]         = useState(null)
+  const [completeModal,   setCompleteModal] = useState(null)
   const progressInterval = useRef(null)
   const toastTimer       = useRef(null)
 
@@ -264,43 +361,63 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
     setCurrentTime(formatTime(videoDuration))
     launchConfetti()
 
-    if (courseWillComplete) {
-      showToast(`Curso "${course.name}" concluído! 🎓`, '#fbbf24')
-    } else {
-      showToast(`Aula "${currentLesson.title}" concluída! 🎉`)
-    }
+    const lessonXp = currentLesson.xp ?? 0
 
     try {
       const res = await activities.completeLesson(currentLesson.id)
-      if (res && setUser) {
+      console.log('[completeLesson] res:', res, '| lessonId:', currentLesson.id, '| lessonXp:', lessonXp)
+      const earned = res?.xpEarned ?? res?.xp ?? lessonXp
+      if (setUser) {
         setUser(prev => ({
           ...prev,
-          xp:    res.totalXp ?? prev.xp,
-          level: res.level   ?? prev.level,
+          xp:    res?.totalXp != null ? res.totalXp : (prev?.xp ?? 0) + earned,
+          ...(res?.level != null ? { level: res.level } : {}),
         }))
+      }
+      const xpLabel = earned > 0 ? ` +${earned} XP` : ''
+      if (!courseWillComplete) {
+        showToast(`Aula "${currentLesson.title}" concluída! 🎉${xpLabel}`)
       }
     } catch (err) {
       console.error('completeLesson error:', err)
-      showToast('Erro ao salvar progresso no servidor.', '#f87171')
+      if (setUser && lessonXp > 0) {
+        setUser(prev => ({ ...prev, xp: (prev?.xp ?? 0) + lessonXp }))
+      }
+      if (!courseWillComplete) {
+        showToast(`Aula "${currentLesson.title}" concluída! 🎉`)
+      }
     }
 
     if (courseWillComplete) {
       try {
         const res = await activities.completeCourse(course.id)
-        if (res && setUser) {
+        const courseXp = res?.xpEarned ?? res?.xp ?? course.xpReward ?? 0
+        if (setUser) {
           setUser(prev => ({
             ...prev,
-            xp:    res.totalXp ?? prev.xp,
-            level: res.level   ?? prev.level,
+            xp:    res?.totalXp != null ? res.totalXp : (prev?.xp ?? 0) + courseXp,
+            ...(res?.level != null ? { level: res.level } : {}),
           }))
         }
-      } catch (_) {}
+        setCompleteModal({ xpEarned: courseXp, leveledUp: res?.leveledUp ?? false, newLevel: res?.level ?? null })
+      } catch (_) {
+        setCompleteModal({ xpEarned: course.xpReward ?? 0, leveledUp: false, newLevel: null })
+      }
     }
   }
 
   // ── Render ──
   return (
     <div className="cp-root" style={{ '--cc': course.color, '--cg': course.glow }}>
+      {completeModal && (
+        <CourseCompleteModal
+          course={course}
+          xpEarned={completeModal.xpEarned}
+          leveledUp={completeModal.leveledUp}
+          newLevel={completeModal.newLevel}
+          onClose={() => { setCompleteModal(null); onNavigate('my-courses') }}
+        />
+      )}
       {toast && (
         <div className="cp-toast" style={{ borderLeftColor: toast.color, borderColor: `${toast.color}40` }}>
           {toast.msg}

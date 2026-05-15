@@ -58,6 +58,9 @@ export const courses = {
   deleteLesson: (courseId, lessonId) =>
     request(`/courses/${courseId}/lessons/${lessonId}`, { method: 'DELETE' }),
 
+  delete: (id) =>
+    request(`/courses/${id}`, { method: 'DELETE' }),
+
   enroll: (code) =>
     request('/courses/enroll', { method: 'POST', body: JSON.stringify({ code }) }),
 }

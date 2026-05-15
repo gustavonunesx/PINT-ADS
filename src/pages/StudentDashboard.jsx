@@ -168,7 +168,11 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
       .then(data => {
         if (data.weeklyStats)    setWeeklyDays(data.weeklyStats)
         if (data.recentActivity?.length) setRecentAct(normalizeActivity(data.recentActivity))
-        if (data.user && setUser) setUser(prev => ({ ...prev, ...data.user }))
+        if (data.user && setUser) setUser(prev => ({
+            ...prev,
+            ...data.user,
+            xp: Math.max(prev?.xp ?? 0, data.user.xp ?? 0),
+          }))
       })
       .catch(() => {})
 

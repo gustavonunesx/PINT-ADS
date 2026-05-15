@@ -113,7 +113,7 @@ function QuizModule({ mod, trail, onComplete }) {
           </div>
         ))}
       </div>
-      <button className="activity-cta-btn" onClick={onComplete}>
+      <button className="activity-cta-btn" onClick={() => onComplete({ correct: score, total: QUIZ_QUESTIONS.length })}>
         Concluir e voltar à trilha →
       </button>
     </div>
@@ -341,19 +341,27 @@ export default function ActivityPage({ user, setUser, onNavigate, onLogout, ctx 
   const [xpResult,  setXpResult]  = useState(null) // { xpEarned, totalXp, level, leveledUp }
 
   const handleComplete = async (quizResult = null) => {
+    const modXp = mod.xp ?? 0
     try {
       const payload = quizResult
         ? { score: quizResult.correct, totalQuestions: quizResult.total }
         : {}
       const res = await activities.completeTrailModule(mod.id, payload)
-      setXpResult(res)
-      // Atualiza XP/level no estado global
-      if (setUser && res) {
-        setUser(prev => ({ ...prev, xp: res.totalXp, level: res.level }))
+      const earned = res?.xpEarned ?? modXp
+      setXpResult({ xpEarned: earned, ...(res ?? {}) })
+      if (setUser) {
+        setUser(prev => ({
+          ...prev,
+          xp:    res?.totalXp != null ? res.totalXp : (prev?.xp ?? 0) + earned,
+          ...(res?.level != null ? { level: res.level } : {}),
+          ...(res?.leveledUp != null ? { leveledUp: res.leveledUp } : {}),
+        }))
       }
     } catch (_) {
-      // Se backend não disponível, mostra XP do mock
-      setXpResult({ xpEarned: mod.xp })
+      setXpResult({ xpEarned: modXp })
+      if (setUser) {
+        setUser(prev => ({ ...prev, xp: (prev?.xp ?? 0) + modXp }))
+      }
     }
     setCompleted(true)
     setTimeout(() => onNavigate('trail', { trailId: trail.id, trail }), 2500)

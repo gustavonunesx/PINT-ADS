@@ -173,15 +173,17 @@ function CoverUpload({ cover, onUpload, small }) {
 
 const DIFFICULTY_OPTIONS = ['Iniciante', 'Intermédio', 'Avançado']
 
-function CreateCourseModal({ onClose, onCreate }) {
-  const [name, setName]               = useState('')
-  const [institution, setInst]        = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory]       = useState('')
-  const [difficulty, setDifficulty]   = useState('')
-  const [thumbnailUrl, setThumbnail]  = useState('')
+function CreateCourseModal({ onClose, onCreate, initialData }) {
+  const isEdit = !!initialData
+  const [name, setName]               = useState(initialData?.name        ?? '')
+  const [institution, setInst]        = useState(initialData?.institution ?? '')
+  const [description, setDescription] = useState(initialData?.description ?? '')
+  const [category, setCategory]       = useState(initialData?.category    ?? '')
+  const [difficulty, setDifficulty]   = useState(initialData?.difficulty  ?? '')
+  const [xpReward, setXpReward]       = useState(initialData?.xpReward != null ? String(initialData.xpReward) : '')
+  const [thumbnailUrl, setThumbnail]  = useState(initialData?.thumbnailUrl ?? '')
   const [banner, setBanner]           = useState(null)
-  const [color, setColor]             = useState(COLORS[0])
+  const [color, setColor]             = useState(initialData?.color ?? COLORS[0])
   const [errors, setErrors]           = useState({})
 
   const submit = () => {
@@ -189,7 +191,8 @@ function CreateCourseModal({ onClose, onCreate }) {
     if (!name.trim())        e.name = 'Informe o nome do curso'
     if (!institution.trim()) e.inst = 'Informe o nome da instituição'
     if (Object.keys(e).length) { setErrors(e); return }
-    onCreate({ name, institution, description, category, difficulty, thumbnailUrl: thumbnailUrl || null, banner, color })
+    const xp = xpReward !== '' ? Number(xpReward) : undefined
+    onCreate({ name, institution, description, category, difficulty, xpReward: xp, thumbnailUrl: thumbnailUrl || null, banner, color })
     onClose()
   }
 
@@ -197,7 +200,7 @@ function CreateCourseModal({ onClose, onCreate }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-panel">
         <div className="modal-header">
-          <h2 className="modal-title">Novo Curso</h2>
+          <h2 className="modal-title">{isEdit ? 'Editar Curso' : 'Novo Curso'}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
@@ -223,7 +226,7 @@ function CreateCourseModal({ onClose, onCreate }) {
               style={{ resize: 'vertical', minHeight: '72px' }} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Categoria <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
               <input className="form-input" type="text" placeholder="Ex: Tecnologia"
@@ -237,6 +240,12 @@ function CreateCourseModal({ onClose, onCreate }) {
                 <option value="">Selecionar...</option>
                 {DIFFICULTY_OPTIONS.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
+            </div>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">XP do curso <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+              <input className="form-input" type="number" min="0" placeholder="Ex: 500"
+                value={xpReward} onChange={e => setXpReward(e.target.value)} />
             </div>
           </div>
 
@@ -265,16 +274,50 @@ function CreateCourseModal({ onClose, onCreate }) {
 
         <div className="modal-footer">
           <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn-primary" onClick={submit}>Criar curso</button>
+          <button className="btn-primary" onClick={submit}>{isEdit ? 'Guardar alterações' : 'Criar curso'}</button>
         </div>
       </div>
     </div>
   )
 }
 
+async function fetchVideoDuration(url) {
+  if (!url) return null
+
+  // Vimeo — oEmbed (sem chave de API)
+  if (/vimeo\.com\/\d+/.test(url)) {
+    try {
+      const res = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.duration) return `${Math.ceil(data.duration / 60)} min`
+      }
+    } catch {}
+    return null
+  }
+
+  // URL direta de vídeo (.mp4, .webm, etc.)
+  if (/\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) {
+    return new Promise((resolve) => {
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+      video.onloadedmetadata = () => {
+        const mins = Math.ceil(video.duration / 60)
+        video.src = ''
+        resolve(`${mins} min`)
+      }
+      video.onerror = () => resolve(null)
+      video.src = url
+    })
+  }
+
+  return null
+}
+
 function LessonEditor({ course, onClose, onSave }) {
   const [lessons, setLessons] = useState(course.lessons_data || [])
   const [editing, setEditing]  = useState(null)
+  const [fetchingDuration, setFetchingDuration] = useState(null)
   const originalLessons = useRef(course.lessons_data || [])
 
   const addLesson = () => {
@@ -394,9 +437,15 @@ function LessonEditor({ course, onClose, onSave }) {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Duração estimada</label>
+                    <label className="form-label">
+                      Duração estimada
+                      {fetchingDuration === lesson.id && (
+                        <span style={{ marginLeft: 8, fontSize: '0.72rem', opacity: 0.6 }}>Detectando...</span>
+                      )}
+                    </label>
                     <input className="form-input" type="text"
                       value={lesson.duration}
+                      disabled={fetchingDuration === lesson.id}
                       onChange={e => updateLesson(lesson.id, 'duration', e.target.value)}
                       placeholder="Ex: 15 min" />
                   </div>
@@ -411,6 +460,14 @@ function LessonEditor({ course, onClose, onSave }) {
                       <input className="form-input video-input" type="text"
                         value={lesson.videoUrl || ''}
                         onChange={e => updateLesson(lesson.id, 'videoUrl', e.target.value || null)}
+                        onBlur={async (e) => {
+                          const url = e.target.value
+                          if (!url) return
+                          setFetchingDuration(lesson.id)
+                          const dur = await fetchVideoDuration(url)
+                          setFetchingDuration(null)
+                          if (dur) updateLesson(lesson.id, 'duration', dur)
+                        }}
                         placeholder="Cole o link do YouTube, Vimeo ou outro..." />
                     </div>
                     <VideoPreview url={lesson.videoUrl} color={course.color} />
@@ -464,7 +521,10 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
   const u = user ? { ...MOCK_INSTITUTION, name: user.company || user.name, type: user.type } : MOCK_INSTITUTION
   const [courses, setCourses]         = useState([])
   const [showCreate, setShowCreate]   = useState(false)
+  const [editingCourse, setEditingCourse] = useState(null)
   const [editingLessons, setEditing]  = useState(null)
+  const [deletingId,   setDeletingId] = useState(null)
+  const [refreshing,   setRefreshing] = useState(false)
   const [activeTab, setActiveTab]     = useState('courses') // 'courses' | 'stats'
   const [copiedId, setCopiedId]       = useState(null)
   const [globalStats, setGlobalStats] = useState(null)
@@ -500,20 +560,50 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
   const totalLessons   = courses.reduce((s, c) => s + (c.lessons_data?.length || 0), 0)
   const publishedCount = courses.filter(c => c.published).length
 
+  const refreshCourses = async () => {
+    setRefreshing(true)
+    try {
+      const fresh = await coursesApi.list()
+      if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
+    } catch {}
+    setRefreshing(false)
+  }
+
+  const deleteCourse = async (id) => {
+    try {
+      await coursesApi.delete(id)
+      setCourses(cs => cs.filter(c => c.id !== id))
+    } catch {}
+    setDeletingId(null)
+  }
+
+  const buildPayload = (data) => ({
+    name:         data.name,
+    institution:  data.institution,
+    color:        data.color,
+    description:  data.description  || null,
+    category:     data.category     || null,
+    difficulty:   data.difficulty   || null,
+    xpReward:     data.xpReward != null ? Number(data.xpReward) : 0,
+    thumbnailUrl: data.thumbnailUrl || null,
+  })
+
   const addCourse = async (data) => {
     try {
-      await coursesApi.create({
-        name:         data.name,
-        institution:  data.institution,
-        color:        data.color,
-        description:  data.description  || null,
-        category:     data.category     || null,
-        difficulty:   data.difficulty   || null,
-        thumbnailUrl: data.thumbnailUrl || null,
-      })
+      await coursesApi.create(buildPayload(data))
       const fresh = await coursesApi.list()
       if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
     } catch (e) {}
+  }
+
+  const updateCourse = async (data) => {
+    if (!editingCourse) return
+    try {
+      await coursesApi.update(editingCourse.id, buildPayload(data))
+      const fresh = await coursesApi.list()
+      if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
+    } catch (e) {}
+    setEditingCourse(null)
   }
 
   const copyCode = (course) => {
@@ -568,9 +658,25 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
           <p className="page-eyebrow">Painel da Instituição</p>
           <h1 className="page-title">{u.name}</h1>
         </div>
-        <button className="btn-primary" onClick={() => setShowCreate(true)}>
-          + Novo Curso
-        </button>
+        <div style={{ display: 'flex', gap: '0.6rem' }}>
+          <button
+            className="btn-ghost"
+            onClick={refreshCourses}
+            disabled={refreshing}
+            title="Recarregar cursos"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
+              style={{ transition: 'transform 0.6s', transform: refreshing ? 'rotate(360deg)' : 'none' }}>
+              <path d="M13 7.5A5.5 5.5 0 112.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M2.5 2v2.5H5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {refreshing ? 'A carregar...' : 'Atualizar'}
+          </button>
+          <button className="btn-primary" onClick={() => setShowCreate(true)}>
+            + Novo Curso
+          </button>
+        </div>
       </div>
 
       {/* Top metrics */}
@@ -668,8 +774,13 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
                 <div className="inst-course-actions">
                   <button className="inst-btn-lessons"
                     style={{ color: course.color, borderColor: `${course.color}30`, background: `${course.color}0a` }}
+                    onClick={() => setEditingCourse(course)}>
+                    ⚙️ Detalhes
+                  </button>
+                  <button className="inst-btn-lessons"
+                    style={{ color: course.color, borderColor: `${course.color}30`, background: `${course.color}0a` }}
                     onClick={() => setEditing(course)}>
-                    ✏️ Editar aulas
+                    ✏️ Aulas
                   </button>
                   <button
                     className={`inst-btn-publish ${course.published ? 'published' : ''}`}
@@ -679,6 +790,27 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
                     onClick={() => togglePublish(course.id)}>
                     {course.published ? '✓ Publicado' : '↑ Publicar'}
                   </button>
+                  {deletingId === course.id ? (
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Excluir?</span>
+                      <button
+                        style={{ padding: '0.25rem 0.55rem', borderRadius: '6px', border: '1px solid #f8717140', background: '#f8717114', color: '#f87171', fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={() => deleteCourse(course.id)}>
+                        Sim
+                      </button>
+                      <button
+                        style={{ padding: '0.25rem 0.55rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'var(--text-muted)', fontSize: '0.72rem', cursor: 'pointer' }}
+                        onClick={() => setDeletingId(null)}>
+                        Não
+                      </button>
+                    </div>
+                  ) : (
+                    <button className="inst-btn-lessons"
+                      style={{ color: '#f87171', borderColor: '#f8717130', background: 'transparent' }}
+                      onClick={() => setDeletingId(course.id)}>
+                      🗑 Excluir
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -783,6 +915,13 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
 
       {/* Modals */}
       {showCreate && <CreateCourseModal onClose={() => setShowCreate(false)} onCreate={addCourse} />}
+      {editingCourse && (
+        <CreateCourseModal
+          onClose={() => setEditingCourse(null)}
+          onCreate={updateCourse}
+          initialData={editingCourse}
+        />
+      )}
       {editingLessons && (
         <LessonEditor
           course={editingLessons}
