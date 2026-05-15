@@ -20,6 +20,7 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final CourseEnrollmentRepository enrollmentRepository;
     private final UserLessonProgressRepository lessonProgressRepo;
+    private final UserCourseProgressRepository courseProgressRepo;
     private final CourseModuleRepository moduleRepository;
     private final LessonRepository lessonRepository;
 
@@ -58,6 +59,7 @@ public class CourseService {
         course.setDifficulty(req.difficulty());
         course.setThumbnailUrl(req.thumbnailUrl());
         course.setColor(req.color());
+        course.setXpReward(req.xpReward());
         course.setInstitution(institution);
         course.setAccessCode(generateUniqueCode());
         courseRepository.save(course);
@@ -74,6 +76,7 @@ public class CourseService {
         course.setDifficulty(req.difficulty());
         course.setThumbnailUrl(req.thumbnailUrl());
         course.setColor(req.color());
+        course.setXpReward(req.xpReward());
         courseRepository.save(course);
         return toDto(course, institution);
     }
@@ -119,6 +122,7 @@ public class CourseService {
         lesson.setVideoUrl(req.videoUrl());
         lesson.setPublished(req.published());
         lesson.setLessonOrder(order);
+        lesson.setXpReward(100);
         lessonRepository.save(lesson);
 
         return new CourseLessonDto(lesson.getId(), lesson.getTitle(), lesson.getDuration(),
@@ -142,6 +146,21 @@ public class CourseService {
 
         return new CourseLessonDto(lesson.getId(), lesson.getTitle(), lesson.getDuration(),
                 lesson.getVideoUrl(), lesson.isPublished(), "available");
+    }
+
+    @Transactional
+    public void deleteCourse(Long courseId, User institution) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Curso não encontrado: " + courseId));
+
+        if (!course.getInstitution().getId().equals(institution.getId())) {
+            throw new IllegalStateException("Não tens permissão para eliminar este curso.");
+        }
+
+        lessonProgressRepo.deleteByCourse(course);
+        courseProgressRepo.deleteByCourse(course);
+        enrollmentRepository.deleteByCourse(course);
+        courseRepository.delete(course); // CascadeType.ALL propaga para modules → lessons
     }
 
     @Transactional

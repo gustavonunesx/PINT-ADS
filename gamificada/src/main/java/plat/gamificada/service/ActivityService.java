@@ -26,6 +26,12 @@ public class ActivityService {
 
     @Transactional
     public CompleteResponse completeTrailModule(Long moduleId, User user, int correctAnswers, int totalQuestions) {
+        // Trails are now backed by course lessons — if no TrailModule exists with this ID,
+        // the ID is a Lesson ID coming from toCourseTrailDto.
+        if (!trailModuleRepo.existsById(moduleId)) {
+            return completeLesson(moduleId, user, correctAnswers, totalQuestions);
+        }
+
         TrailModule module = trailModuleRepo.findById(moduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Módulo de trilha não encontrado: " + moduleId));
 
@@ -39,7 +45,7 @@ public class ActivityService {
                 });
 
         if (progress.isCompleted()) {
-            return new CompleteResponse(0, user.getXp(), user.getLevel(), List.of());
+            return new CompleteResponse(0, user.getXp(), user.getLevel(), false, List.of());
         }
 
         // Verifica lock: módulo i só pode ser completado se i-1 estiver done
@@ -68,7 +74,9 @@ public class ActivityService {
         progress.setCompletedAt(LocalDateTime.now());
         trailProgressRepo.save(progress);
 
+        int levelBefore = user.getLevel();
         xpService.addXp(user, xpEarned, "Módulo de trilha: " + module.getTitle());
+        boolean leveledUp = user.getLevel() > levelBefore;
 
         List<Achievement> unlocked = achievementService.checkAndUnlock(user);
         List<AchievementDto> achDtos = unlocked.stream()
@@ -76,7 +84,7 @@ public class ActivityService {
                         a.getDescription(), a.getIcon(), a.getXpReward(), LocalDateTime.now().toString()))
                 .toList();
 
-        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), achDtos);
+        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), leveledUp, achDtos);
     }
 
     @Transactional
@@ -94,7 +102,7 @@ public class ActivityService {
                 });
 
         if (progress.isCompleted()) {
-            return new CompleteResponse(0, user.getXp(), user.getLevel(), List.of());
+            return new CompleteResponse(0, user.getXp(), user.getLevel(), false, List.of());
         }
 
         int xpEarned;
@@ -110,7 +118,9 @@ public class ActivityService {
         progress.setCompletedAt(LocalDateTime.now());
         lessonProgressRepo.save(progress);
 
+        int levelBefore = user.getLevel();
         xpService.addXp(user, xpEarned, "Lição: " + lesson.getTitle());
+        boolean leveledUp = user.getLevel() > levelBefore;
 
         List<Achievement> unlocked = achievementService.checkAndUnlock(user);
         List<AchievementDto> achDtos = unlocked.stream()
@@ -118,7 +128,7 @@ public class ActivityService {
                         a.getDescription(), a.getIcon(), a.getXpReward(), LocalDateTime.now().toString()))
                 .toList();
 
-        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), achDtos);
+        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), leveledUp, achDtos);
     }
 
     @Transactional
@@ -127,7 +137,7 @@ public class ActivityService {
                 .orElseThrow(() -> new IllegalArgumentException("Curso não encontrado: " + courseId));
 
         if (courseProgressRepo.existsByCourseAndUser(course, user)) {
-            return new CompleteResponse(0, user.getXp(), user.getLevel(), List.of());
+            return new CompleteResponse(0, user.getXp(), user.getLevel(), false, List.of());
         }
 
         long total = lessonRepo.countByModule_Course(course);
@@ -137,15 +147,17 @@ public class ActivityService {
             throw new IllegalStateException("Nem todas as aulas foram concluídas.");
         }
 
-        UserCourseProgress progress = new UserCourseProgress();
-        progress.setCourse(course);
-        progress.setUser(user);
-        courseProgressRepo.save(progress);
+        UserCourseProgress courseProgress = new UserCourseProgress();
+        courseProgress.setCourse(course);
+        courseProgress.setUser(user);
+        courseProgressRepo.save(courseProgress);
 
         int xpEarned = course.getXpReward();
+        int levelBefore = user.getLevel();
         if (xpEarned > 0) {
             xpService.addXp(user, xpEarned, "Conclusão do curso: " + course.getTitle());
         }
+        boolean leveledUp = user.getLevel() > levelBefore;
 
         List<Achievement> unlocked = achievementService.checkAndUnlock(user);
         List<AchievementDto> achDtos = unlocked.stream()
@@ -153,6 +165,6 @@ public class ActivityService {
                         a.getDescription(), a.getIcon(), a.getXpReward(), LocalDateTime.now().toString()))
                 .toList();
 
-        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), achDtos);
+        return new CompleteResponse(xpEarned, user.getXp(), user.getLevel(), leveledUp, achDtos);
     }
 }

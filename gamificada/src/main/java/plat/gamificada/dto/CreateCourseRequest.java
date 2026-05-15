@@ -9,5 +9,6 @@ public record CreateCourseRequest(
         String difficulty,
         String thumbnailUrl,
         String color,
+        int xpReward,
         String institution  // ignorado — vem do token
 ) {}

@@ -58,6 +58,21 @@ public class CourseController {
         return ResponseEntity.ok(courseService.update(id, req, user));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCourse(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        User user = UserResolver.resolve(auth, userRepository);
+        try {
+            courseService.deleteCourse(id, user);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/enroll")
     public ResponseEntity<?> enroll(
             @Valid @RequestBody EnrollRequest req,

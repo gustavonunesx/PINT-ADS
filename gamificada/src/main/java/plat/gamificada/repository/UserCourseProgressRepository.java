@@ -8,4 +8,5 @@ import plat.gamificada.entity.UserCourseProgress;
 public interface UserCourseProgressRepository extends JpaRepository<UserCourseProgress, Long> {
     boolean existsByCourseAndUser(Course course, User user);
     long countByCourse(Course course);
+    void deleteByCourse(Course course);
 }
