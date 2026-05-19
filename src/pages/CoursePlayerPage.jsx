@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { activities, courses as coursesApi } from '../api/client'
+import CertificateModal from '../components/CertificateModal'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ function VideoPlayer({ videoUrl, color }) {
 
 // ── Course Complete Modal ──────────────────────────────────────────────────
 
-function CourseCompleteModal({ course, xpEarned, leveledUp, newLevel, onClose }) {
+function CourseCompleteModal({ course, xpEarned, leveledUp, newLevel, onClose, onDismiss }) {
   const [show, setShow] = useState(false)
   useEffect(() => { const t = setTimeout(() => setShow(true), 80); return () => clearTimeout(t) }, [])
 
@@ -232,21 +233,34 @@ function CourseCompleteModal({ course, xpEarned, leveledUp, newLevel, onClose })
           </div>
         )}
 
-        {/* Button */}
-        <button
-          onClick={onClose}
-          style={{
-            width: '100%', padding: '0.85rem',
-            background: course.color, border: 'none', borderRadius: '10px',
-            color: '#000', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-            boxShadow: `0 0 24px ${course.color}40`,
-            transition: 'opacity 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        >
-          Ver meus cursos →
-        </button>
+        {/* Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%', padding: '0.85rem',
+              background: course.color, border: 'none', borderRadius: '10px',
+              color: '#000', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
+              boxShadow: `0 0 24px ${course.color}40`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+            }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            🏅 Ver meu certificado
+          </button>
+          <button
+            onClick={onDismiss}
+            style={{
+              width: '100%', padding: '0.7rem',
+              background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '10px', color: '#9ca3af', fontWeight: 600,
+              fontSize: '0.85rem', cursor: 'pointer',
+            }}
+          >
+            Ver meus cursos →
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -267,6 +281,7 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
   const [activeTab,       setActiveTab]     = useState('descricao')
   const [toast,           setToast]         = useState(null)
   const [completeModal,   setCompleteModal] = useState(null)
+  const [showCertificate, setShowCertificate] = useState(false)
   const progressInterval = useRef(null)
   const toastTimer       = useRef(null)
 
@@ -409,13 +424,21 @@ export default function CoursePlayerPage({ user, setUser, onNavigate, onLogout, 
   // ── Render ──
   return (
     <div className="cp-root" style={{ '--cc': course.color, '--cg': course.glow }}>
-      {completeModal && (
+      {completeModal && !showCertificate && (
         <CourseCompleteModal
           course={course}
           xpEarned={completeModal.xpEarned}
           leveledUp={completeModal.leveledUp}
           newLevel={completeModal.newLevel}
-          onClose={() => { setCompleteModal(null); onNavigate('my-courses') }}
+          onClose={() => { setCompleteModal(null); setShowCertificate(true) }}
+          onDismiss={() => { setCompleteModal(null); onNavigate('my-courses') }}
+        />
+      )}
+      {showCertificate && (
+        <CertificateModal
+          course={course}
+          user={user}
+          onClose={() => { setShowCertificate(false); onNavigate('my-courses') }}
         />
       )}
       {toast && (

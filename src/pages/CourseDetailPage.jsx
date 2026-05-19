@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { courses as coursesApi } from '../api/client'
+import CertificateModal from '../components/CertificateModal'
 
 const PALETTE = [
   { color: '#3be8b0', glow: 'rgba(59,232,176,0.15)',  badge: '🎓' },
@@ -99,9 +100,10 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
   const courseId  = ctx?.courseId
   const firstName = user?.name?.split(' ')[0] || 'Aluno'
 
-  const [course,  setCourse]  = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [denied,  setDenied]  = useState(false)
+  const [course,      setCourse]      = useState(null)
+  const [loading,     setLoading]     = useState(true)
+  const [denied,      setDenied]      = useState(false)
+  const [showCert,    setShowCert]    = useState(false)
 
   useEffect(() => {
     if (!courseId) { onNavigate('my-courses'); return }
@@ -169,6 +171,13 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
 
   return (
     <div className="cd-root" style={{ '--cc': course.color, '--cg': course.glow }}>
+      {showCert && (
+        <CertificateModal
+          course={course}
+          user={user}
+          onClose={() => setShowCert(false)}
+        />
+      )}
       {/* Nav */}
       <nav className="cd-nav">
         <div className="cd-nav-inner">
@@ -330,6 +339,33 @@ export default function CourseDetailPage({ user, onNavigate, onLogout, ctx }) {
                     </div>
                   </div>
                 </div>
+
+                {course.progress === 100 && (
+                  <button
+                    onClick={() => setShowCert(true)}
+                    style={{
+                      marginTop: '1.25rem',
+                      width: '100%',
+                      padding: '0.8rem',
+                      background: `${course.color}18`,
+                      border: `1px solid ${course.color}50`,
+                      borderRadius: '10px',
+                      color: course.color,
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${course.color}28`}
+                    onMouseLeave={e => e.currentTarget.style.background = `${course.color}18`}
+                  >
+                    🏅 Baixar certificado
+                  </button>
+                )}
               </div>
             </div>
           </div>
