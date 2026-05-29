@@ -5,6 +5,7 @@ public record CourseLessonDto(
         String title,
         String duration,
         String videoUrl,
+        String thumbnailUrl,
         boolean published,
         String status
 ) {}

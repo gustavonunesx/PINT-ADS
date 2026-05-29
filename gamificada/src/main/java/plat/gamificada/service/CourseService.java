@@ -120,13 +120,14 @@ public class CourseService {
         lesson.setTitle(req.title());
         lesson.setDuration(req.duration());
         lesson.setVideoUrl(req.videoUrl());
+        lesson.setThumbnailUrl(req.thumbnailUrl());
         lesson.setPublished(req.published());
         lesson.setLessonOrder(order);
         lesson.setXpReward(100);
         lessonRepository.save(lesson);
 
         return new CourseLessonDto(lesson.getId(), lesson.getTitle(), lesson.getDuration(),
-                lesson.getVideoUrl(), lesson.isPublished(), "available");
+                lesson.getVideoUrl(), lesson.getThumbnailUrl(), lesson.isPublished(), "available");
     }
 
     @Transactional
@@ -141,11 +142,12 @@ public class CourseService {
         lesson.setTitle(req.title());
         lesson.setDuration(req.duration());
         lesson.setVideoUrl(req.videoUrl());
+        lesson.setThumbnailUrl(req.thumbnailUrl());
         lesson.setPublished(req.published());
         lessonRepository.save(lesson);
 
         return new CourseLessonDto(lesson.getId(), lesson.getTitle(), lesson.getDuration(),
-                lesson.getVideoUrl(), lesson.isPublished(), "available");
+                lesson.getVideoUrl(), lesson.getThumbnailUrl(), lesson.isPublished(), "available");
     }
 
     @Transactional
@@ -221,6 +223,7 @@ public class CourseService {
                         lesson.getTitle(),
                         lesson.getDuration(),
                         lesson.getVideoUrl(),
+                        lesson.getThumbnailUrl(),
                         lesson.isPublished(),
                         done ? "done" : "available"
                 ));

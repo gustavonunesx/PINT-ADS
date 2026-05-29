@@ -6,5 +6,6 @@ public record CreateLessonRequest(
         @NotBlank String title,
         String duration,
         String videoUrl,
+        String thumbnailUrl,
         boolean published
 ) {}

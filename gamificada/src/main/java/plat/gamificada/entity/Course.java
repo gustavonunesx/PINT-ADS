@@ -25,6 +25,7 @@ public class Course {
 
     private String category;
     private String difficulty;
+    @Column(columnDefinition = "MEDIUMTEXT")
     private String thumbnailUrl;
     private String color;
 

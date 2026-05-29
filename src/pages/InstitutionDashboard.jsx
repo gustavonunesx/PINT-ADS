@@ -35,38 +35,59 @@ const COLORS = ['#3be8b0', '#63c8ff', '#a78bfa', '#fbbf24', '#f87171', '#34d399'
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function BannerUpload({ banner, onUpload, color }) {
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+function BannerDrop({ value, onChange, color }) {
   const ref = useRef()
   const [drag, setDrag] = useState(false)
 
-  const handleFile = (file) => {
+  const handleFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return
-    const url = URL.createObjectURL(file)
-    onUpload(url)
+    const b64 = await fileToBase64(file)
+    onChange(b64)
   }
 
   return (
     <div
       className={`banner-upload ${drag ? 'drag-over' : ''}`}
-      style={{ background: banner ? 'transparent' : `${color}08`, borderColor: drag ? color : undefined }}
+      style={{
+        background: value ? 'transparent' : `${color}08`,
+        borderColor: drag ? color : undefined,
+        cursor: 'pointer',
+        position: 'relative',
+      }}
       onDragOver={e => { e.preventDefault(); setDrag(true) }}
       onDragLeave={() => setDrag(false)}
       onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
       onClick={() => ref.current.click()}
     >
-      {banner
-        ? <img src={banner} alt="banner" className="banner-preview" />
-        : (
-          <div className="banner-placeholder">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color, opacity: 0.6 }}>
-              <rect x="2" y="6" width="28" height="20" rx="3" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="11" cy="13" r="3" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M2 22l8-6 6 5 4-3 10 7" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-            <span style={{ color }}>Clique ou arraste o banner aqui</span>
-            <span className="banner-hint">PNG, JPG · Recomendado 1280×360px</span>
-          </div>
-        )}
+      {value ? (
+        <>
+          <img src={value} alt="banner" className="banner-preview" />
+          <button
+            className="banner-remove-btn"
+            onClick={e => { e.stopPropagation(); onChange('') }}
+            title="Remover banner"
+          >✕</button>
+        </>
+      ) : (
+        <div className="banner-placeholder">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{ color, opacity: 0.6 }}>
+            <rect x="2" y="6" width="28" height="20" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+            <circle cx="11" cy="13" r="3" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M2 22l8-6 6 5 4-3 10 7" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ color }}>Clique ou arraste o banner aqui</span>
+          <span className="banner-hint">PNG, JPG · Recomendado 1280×360px</span>
+        </div>
+      )}
       <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={e => handleFile(e.target.files[0])} />
     </div>
@@ -145,28 +166,73 @@ function VideoPreview({ url, color }) {
   )
 }
 
-function CoverUpload({ cover, onUpload, small }) {
+function CoverDrop({ url, onUpload, small }) {
   const ref = useRef()
+  const [drag, setDrag] = useState(false)
+
+  const handleFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return
+    const b64 = await fileToBase64(file)
+    onUpload(b64)
+  }
+
+  if (small) {
+    return (
+      <div
+        className={`cover-upload cover-upload--sm ${drag ? 'drag-over' : ''}`}
+        style={{ cursor: 'pointer', position: 'relative' }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDrag(true) }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
+        onClick={e => { e.stopPropagation(); ref.current.click() }}
+      >
+        {url
+          ? <img src={url} alt="capa" className="cover-preview" />
+          : <div className="cover-placeholder">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <rect x="1" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                <circle cx="7" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M1 14l5-4 4 3 3-2 6 5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+              </svg>
+            </div>
+        }
+        <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={e => handleFile(e.target.files[0])} />
+      </div>
+    )
+  }
+
   return (
-    <div className={`cover-upload ${small ? 'cover-upload--sm' : ''}`}
-      onClick={() => ref.current.click()}>
-      {cover
-        ? <img src={cover} alt="capa" className="cover-preview" />
-        : (
-          <div className="cover-placeholder">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="1" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.3"/>
-              <circle cx="7" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
-              <path d="M1 14l5-4 4 3 3-2 6 5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-            </svg>
-            <span>{small ? 'Capa' : 'Adicionar capa'}</span>
-          </div>
-        )}
+    <div
+      className={`cover-drop-large ${drag ? 'drag-over' : ''}`}
+      style={{ cursor: 'pointer', position: 'relative' }}
+      onDragOver={e => { e.preventDefault(); setDrag(true) }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
+      onClick={() => ref.current.click()}
+    >
+      {url ? (
+        <>
+          <img src={url} alt="capa" className="cover-drop-preview" />
+          <button
+            className="banner-remove-btn"
+            onClick={e => { e.stopPropagation(); onUpload(null) }}
+            title="Remover capa"
+          >✕</button>
+        </>
+      ) : (
+        <div className="cover-drop-placeholder">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ opacity: 0.5 }}>
+            <rect x="1" y="4" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="1.4"/>
+            <circle cx="9" cy="11" r="3" stroke="currentColor" strokeWidth="1.4"/>
+            <path d="M1 20l7-6 6 5 4-3 9 7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+          </svg>
+          <span>Clique ou arraste a capa aqui</span>
+          <span style={{ fontSize: '0.72rem', opacity: 0.5 }}>PNG, JPG</span>
+        </div>
+      )}
       <input ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
-        onChange={e => {
-          const f = e.target.files[0]
-          if (f) onUpload(URL.createObjectURL(f))
-        }} />
+        onChange={e => handleFile(e.target.files[0])} />
     </div>
   )
 }
@@ -182,7 +248,6 @@ function CreateCourseModal({ onClose, onCreate, initialData }) {
   const [difficulty, setDifficulty]   = useState(initialData?.difficulty  ?? '')
   const [xpReward, setXpReward]       = useState(initialData?.xpReward != null ? String(initialData.xpReward) : '')
   const [thumbnailUrl, setThumbnail]  = useState(initialData?.thumbnailUrl ?? '')
-  const [banner, setBanner]           = useState(null)
   const [color, setColor]             = useState(initialData?.color ?? COLORS[0])
   const [errors, setErrors]           = useState({})
 
@@ -192,7 +257,7 @@ function CreateCourseModal({ onClose, onCreate, initialData }) {
     if (!institution.trim()) e.inst = 'Informe o nome da instituição'
     if (Object.keys(e).length) { setErrors(e); return }
     const xp = xpReward !== '' ? Number(xpReward) : undefined
-    onCreate({ name, institution, description, category, difficulty, xpReward: xp, thumbnailUrl: thumbnailUrl || null, banner, color })
+    onCreate({ name, institution, description, category, difficulty, xpReward: xp, thumbnailUrl: thumbnailUrl || null, color })
     onClose()
   }
 
@@ -250,12 +315,6 @@ function CreateCourseModal({ onClose, onCreate, initialData }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">URL da thumbnail <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
-            <input className="form-input" type="text" placeholder="https://exemplo.com/imagem.jpg"
-              value={thumbnailUrl} onChange={e => setThumbnail(e.target.value)} />
-          </div>
-
-          <div className="form-group">
             <label className="form-label">Cor do curso</label>
             <div className="color-picker-row">
               {COLORS.map(c => (
@@ -267,8 +326,8 @@ function CreateCourseModal({ onClose, onCreate, initialData }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Banner do curso</label>
-            <BannerUpload banner={banner} onUpload={setBanner} color={color} />
+            <label className="form-label">Banner do curso <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+            <BannerDrop value={thumbnailUrl} onChange={setThumbnail} color={color} />
           </div>
         </div>
 
@@ -324,7 +383,7 @@ function LessonEditor({ course, onClose, onSave }) {
     const newL = {
       id: `l${Date.now()}`,
       title: `Aula ${lessons.length + 1}`,
-      cover: null,
+      thumbnailUrl: null,
       duration: '10 min',
       videoUrl: null,
       published: true,
@@ -388,8 +447,8 @@ function LessonEditor({ course, onClose, onSave }) {
                     </svg>
                   ) : idx + 1}
                 </div>
-                <CoverUpload cover={lesson.cover} small
-                  onUpload={url => updateLesson(lesson.id, 'cover', url)} />
+                <CoverDrop url={lesson.thumbnailUrl} small
+                  onUpload={url => updateLesson(lesson.id, 'thumbnailUrl', url)} />
                 <div className="lesson-item-info">
                   <div className="lesson-item-title">{lesson.title}</div>
                   <div className="lesson-item-meta">
@@ -469,9 +528,11 @@ function LessonEditor({ course, onClose, onSave }) {
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Capa da aula</label>
-                    <CoverUpload cover={lesson.cover}
-                      onUpload={url => updateLesson(lesson.id, 'cover', url)} />
+                    <label className="form-label">Capa da aula <span style={{ opacity: 0.5, fontWeight: 400 }}>(opcional)</span></label>
+                    <CoverDrop
+                      url={lesson.thumbnailUrl}
+                      onUpload={url => updateLesson(lesson.id, 'thumbnailUrl', url)}
+                    />
                   </div>
 
                 </div>
@@ -582,12 +643,15 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
 
   const updateCourse = async (data) => {
     if (!editingCourse) return
+    const payload = buildPayload(data)
+    // Optimistic update so the banner appears immediately
+    setCourses(cs => cs.map(c => c.id === editingCourse.id ? normalizeCourse({ ...c, ...payload }) : c))
+    setEditingCourse(null)
     try {
-      await coursesApi.update(editingCourse.id, buildPayload(data))
+      await coursesApi.update(editingCourse.id, payload)
       const fresh = await coursesApi.list()
       if (Array.isArray(fresh)) setCourses(fresh.map(normalizeCourse))
     } catch (e) {}
-    setEditingCourse(null)
   }
 
   const copyCode = (course) => {
@@ -607,10 +671,11 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
     const removedLessons  = originalLessons.filter(l => !isTemp(l.id) && !keptIds.has(String(l.id)))
 
     const lessonPayload = (l) => ({
-      title:     l.title,
-      duration:  l.duration,
-      videoUrl:  l.videoUrl,
-      published: l.published,
+      title:        l.title,
+      duration:     l.duration,
+      videoUrl:     l.videoUrl,
+      thumbnailUrl: l.thumbnailUrl || null,
+      published:    l.published,
     })
 
     for (const lesson of newLessons) {
@@ -694,9 +759,9 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
 
               {/* Banner */}
               <div className="inst-course-banner"
-                style={{ background: course.banner ? 'transparent' : `${course.color}12` }}>
-                {course.banner
-                  ? <img src={course.banner} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                style={{ background: course.thumbnailUrl ? 'transparent' : `${course.color}12` }}>
+                {course.thumbnailUrl
+                  ? <img src={course.thumbnailUrl} alt="banner" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : <div className="inst-banner-placeholder" style={{ color: course.color }}>
                       <span style={{ fontSize: '2rem' }}>🎓</span>
                       <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>{course.institution}</span>

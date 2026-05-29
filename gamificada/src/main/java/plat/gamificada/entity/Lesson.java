@@ -33,6 +33,9 @@ public class Lesson {
     @Column(columnDefinition = "TEXT")
     private String videoUrl;
 
+    @Column(columnDefinition = "MEDIUMTEXT")
+    private String thumbnailUrl;
+
     private boolean published = true;
 
     private String duration;
