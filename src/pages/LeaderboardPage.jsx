@@ -27,6 +27,7 @@ function initials(name = '') {
 function normalize(e, currentUserId) {
   const badges = ['🥇', '🥈', '🥉']
   return {
+    userId: e.userId,
     rank:   e.rank,
     name:   e.name   ?? 'Utilizador',
     xp:     e.xp     ?? 0,
@@ -139,7 +140,7 @@ export default function LeaderboardPage({ user, onNavigate, onLogout }) {
             <Podium top3={top3} />
             <div className="lb-list">
               {rest.map(p => (
-                <div className={`lb-row ${p.isMe ? 'me' : ''}`} key={p.name}>
+                <div className={`lb-row ${p.isMe ? 'me' : ''}`} key={p.userId}>
                   <div className="lb-rank">#{p.rank}</div>
                   <div className="lb-avatar" style={{ background: `${p.color}18`, color: p.color }}>{p.avatar}</div>
                   <div className="lb-info">
