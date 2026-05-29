@@ -8,5 +8,6 @@ public record DashboardDto(
         int trailModulesCompleted,
         int coursesInProgress,
         List<ActivityLogDto> recentActivity,
-        List<AchievementDto> recentAchievements
+        List<AchievementDto> recentAchievements,
+        List<WeeklyDayDto> weeklyStats
 ) {}

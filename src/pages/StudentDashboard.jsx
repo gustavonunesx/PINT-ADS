@@ -42,13 +42,13 @@ function normalizeCourse(c) {
 }
 
 const WEEKLY_DAYS = [
-  { day: 'Seg', minutes: 45, done: true  },
-  { day: 'Ter', minutes: 30, done: true  },
-  { day: 'Qua', minutes: 60, done: true  },
-  { day: 'Qui', minutes: 20, done: true  },
-  { day: 'Sex', minutes: 50, done: true  },
-  { day: 'Sáb', minutes: 15, done: true  },
-  { day: 'Dom', minutes: 0,  done: false },
+  { day: 'Seg', xpEarned: 0, done: false },
+  { day: 'Ter', xpEarned: 0, done: false },
+  { day: 'Qua', xpEarned: 0, done: false },
+  { day: 'Qui', xpEarned: 0, done: false },
+  { day: 'Sex', xpEarned: 0, done: false },
+  { day: 'Sáb', xpEarned: 0, done: false },
+  { day: 'Dom', xpEarned: 0, done: false },
 ]
 
 const RECENT_ACTIVITY = [
@@ -201,8 +201,8 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
       .catch(() => {})
   }, [searchQuery])
 
-  const totalMin   = weeklyDays.reduce((s, d) => s + d.minutes, 0)
-  const maxMin     = Math.max(...weeklyDays.map(d => d.minutes), 1)
+  const totalXp    = weeklyDays.reduce((s, d) => s + d.xpEarned, 0)
+  const maxXp      = Math.max(...weeklyDays.map(d => d.xpEarned), 1)
   const activeDays = weeklyDays.filter(d => d.done).length
   const nextCourse = myCourses.find(c => c.progress < 100)
 
@@ -376,7 +376,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
                 { v: myCourses.filter(c => c.progress < 100).length, l: 'Em andamento' },
                 { v: myCourses.filter(c => c.progress === 100).length,                 l: 'Concluídos'   },
                 { v: myCourses.reduce((s, c) => s + c.lessonsDone, 0),                 l: 'Aulas feitas' },
-                { v: 3, l: 'Certificados' },
+                { v: myCourses.filter(c => c.progress === 100).length, l: 'Certificados' },
               ].map(({ v, l }) => (
                 <div className="stat-card" key={l}>
                   <div className="stat-value">{v}</div>
@@ -395,8 +395,8 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
               </div>
               <div className="sp-wstats">
                 {[
-                  { v: `${Math.floor(totalMin/60)}h ${totalMin%60}m`, l: 'Total estudado' },
-                  { v: `${Math.round(totalMin / Math.max(activeDays, 1))}m`, l: 'Média por dia' },
+                  { v: `${totalXp} XP`, l: 'XP total' },
+                  { v: `${Math.round(totalXp / Math.max(activeDays, 1))} XP`, l: 'Média por dia' },
                   { v: `${activeDays}/7`, l: 'Dias ativos' },
                 ].map(({ v, l }) => (
                   <div className="sp-wstat" key={l}>
@@ -407,11 +407,11 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
               </div>
               <div className="sp-wchart">
                 {weeklyDays.map(d => (
-                  <Tooltip key={d.day} text={d.minutes > 0 ? `${d.minutes}min` : 'Sem estudo'}>
+                  <Tooltip key={d.day} text={d.xpEarned > 0 ? `${d.xpEarned} XP` : 'Sem atividade'}>
                     <div className="sp-wbar-col">
                       <div className="sp-wbar-wrap">
                         <div className="sp-wbar-fill" style={{
-                          height: `${(d.minutes / maxMin) * 100}%`,
+                          height: `${(d.xpEarned / maxXp) * 100}%`,
                           background: d.done ? 'var(--accent)' : 'rgba(255,255,255,0.04)',
                           boxShadow: d.done ? '0 0 8px rgba(59,232,176,0.3)' : 'none',
                         }} />
@@ -472,7 +472,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
               </div>
               <div className="float-card-label">Dias consecutivos de estudo</div>
               <div className="float-card-value">{u.streak}</div>
-              <div className="float-card-sub">{activeDays}/7 dias esta semana · {Math.floor(totalMin/60)}h {totalMin%60}m no total</div>
+              <div className="float-card-sub">{activeDays}/7 dias esta semana · {totalXp} XP no total</div>
             </div>
           </div>
 
@@ -590,7 +590,7 @@ export default function StudentDashboard({ user, setUser, onNavigate, onLogout }
                     )}
                   </div>
                   <span className="sp-sday-lbl">{d.day}</span>
-                  {d.minutes > 0 && <span className="sp-sday-min">{d.minutes}m</span>}
+                  {d.xpEarned > 0 && <span className="sp-sday-min">{d.xpEarned} XP</span>}
                 </div>
               ))}
             </div>

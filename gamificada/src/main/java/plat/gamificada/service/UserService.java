@@ -12,7 +12,13 @@ import plat.gamificada.repository.UserLessonProgressRepository;
 import plat.gamificada.repository.UserRepository;
 import plat.gamificada.repository.UserTrailModuleProgressRepository;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -65,13 +71,16 @@ public class UserService {
                 .map(this::toAchievementDto)
                 .toList();
 
+        List<WeeklyDayDto> weeklyStats = buildWeeklyStats(user);
+
         return new DashboardDto(
                 toProfileDto(user),
                 (int) lessons,
                 (int) trailMods,
                 0,
                 recentActivity,
-                recentAchievements
+                recentAchievements,
+                weeklyStats
         );
     }
 
@@ -80,6 +89,31 @@ public class UserService {
         return userAchievementRepository.findByUser(user).stream()
                 .map(this::toAchievementDto)
                 .toList();
+    }
+
+    private List<WeeklyDayDto> buildWeeklyStats(User user) {
+        LocalDate today    = LocalDate.now();
+        LocalDate monday   = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate sunday   = monday.plusDays(6);
+
+        List<ActivityLog> weekLogs = activityLogRepository.findByUserAndDateAfter(user, monday.minusDays(1));
+
+        Map<LocalDate, Integer> xpByDay = weekLogs.stream()
+                .filter(l -> !l.getDate().isAfter(sunday))
+                .collect(Collectors.groupingBy(
+                        ActivityLog::getDate,
+                        Collectors.summingInt(ActivityLog::getXpEarned)
+                ));
+
+        String[] labels = { "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom" };
+        List<WeeklyDayDto> result = new ArrayList<>(7);
+        for (int i = 0; i < 7; i++) {
+            LocalDate day    = monday.plusDays(i);
+            int xp           = xpByDay.getOrDefault(day, 0);
+            boolean done     = xp > 0;
+            result.add(new WeeklyDayDto(labels[i], xp, done));
+        }
+        return result;
     }
 
     private ActivityLogDto toActivityDto(ActivityLog log) {

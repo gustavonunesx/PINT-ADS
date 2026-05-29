@@ -50,7 +50,10 @@ public class SimpleAuthController {
     public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         String name  = body.get("name");
-        String role  = body.getOrDefault("role", "STUDENT");
+
+        // "type" field from frontend ("student"/"institution") determines account role
+        String type        = body.getOrDefault("type", "student");
+        User.Role accountRole = "institution".equalsIgnoreCase(type) ? User.Role.INSTITUTION : User.Role.STUDENT;
 
         if (email == null || name == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Nome e e-mail obrigatórios"));
@@ -67,9 +70,12 @@ public class SimpleAuthController {
         User user = new User();
         user.setName(name.trim());
         user.setEmail(email);
-        user.setRole(User.Role.valueOf(role.toUpperCase()));
-        if ("INSTITUTION".equalsIgnoreCase(role)) {
-            user.setCompanyName(body.getOrDefault("companyName", name.trim()));
+        user.setRole(accountRole);
+        if (accountRole == User.Role.INSTITUTION) {
+            // frontend sends "company", legacy may send "companyName"
+            String companyName = body.containsKey("company") ? body.get("company")
+                               : body.getOrDefault("companyName", name.trim());
+            user.setCompanyName(companyName);
         }
         userRepository.save(user);
 
