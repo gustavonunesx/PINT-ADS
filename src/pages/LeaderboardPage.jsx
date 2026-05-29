@@ -85,7 +85,7 @@ export default function LeaderboardPage({ user, onNavigate, onLogout }) {
 
   const myEntry = board.find(e => e.isMe)
   const top3    = board.filter(e => e.rank <= 3).slice(0, 3)
-  const rest    = board.filter(e => e.rank > 3)
+  const rest    = board
 
   return (
     <AppShell user={user} onNavigate={onNavigate} onLogout={onLogout} activePage="leaderboard">
@@ -139,7 +139,7 @@ export default function LeaderboardPage({ user, onNavigate, onLogout }) {
             <Podium top3={top3} />
             <div className="lb-list">
               {rest.map(p => (
-                <div className={`lb-row ${p.isMe ? 'me' : ''}`} key={p.rank}>
+                <div className={`lb-row ${p.isMe ? 'me' : ''}`} key={p.name}>
                   <div className="lb-rank">#{p.rank}</div>
                   <div className="lb-avatar" style={{ background: `${p.color}18`, color: p.color }}>{p.avatar}</div>
                   <div className="lb-info">
