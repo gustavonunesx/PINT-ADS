@@ -40,41 +40,41 @@ public class LeaderboardService {
                         r -> ((Number) r[1]).intValue()
                 ));
 
+        List<long[]> sorted = users.stream()
+                .map(u -> new long[]{ u.getId(), weeklyXp.getOrDefault(u.getId(), 0) })
+                .sorted((a, b) -> a[1] != b[1] ? Long.compare(b[1], a[1]) : Long.compare(a[0], b[0]))
+                .collect(Collectors.toList());
+
         Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
-
-        List<LeaderboardEntryDto> entries = new ArrayList<>();
-        weeklyXp.entrySet().stream()
-                .sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
-                .forEach(e -> {
-                    User u = userMap.get(e.getKey());
-                    if (u != null) {
-                        entries.add(new LeaderboardEntryDto(
-                                entries.size() + 1,
-                                u.getId(), u.getName(),
-                                e.getValue(), u.getLevel(), u.getStreak()
-                        ));
-                    }
-                });
-
-        // inclui usuários sem atividade na semana com xp=0
-        userMap.values().stream()
-                .filter(u -> !weeklyXp.containsKey(u.getId()))
-                .forEach(u -> entries.add(new LeaderboardEntryDto(
-                        entries.size() + 1,
-                        u.getId(), u.getName(), 0, u.getLevel(), u.getStreak()
-                )));
-
-        return entries;
+        return assignRanks(sorted, userMap, weeklyXp);
     }
 
     private List<LeaderboardEntryDto> buildAllTimeLeaderboard(List<User> users) {
+        List<long[]> sorted = users.stream()
+                .map(u -> new long[]{ u.getId(), u.getXp() })
+                .sorted((a, b) -> a[1] != b[1] ? Long.compare(b[1], a[1]) : Long.compare(a[0], b[0]))
+                .collect(Collectors.toList());
+
+        Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, u -> u));
+        Map<Long, Integer> xpMap = users.stream().collect(Collectors.toMap(User::getId, User::getXp));
+        return assignRanks(sorted, userMap, xpMap);
+    }
+
+    private List<LeaderboardEntryDto> assignRanks(List<long[]> sorted, Map<Long, User> userMap, Map<Long, Integer> xpMap) {
         List<LeaderboardEntryDto> entries = new ArrayList<>();
-        users.stream()
-                .sorted((a, b) -> Integer.compare(b.getXp(), a.getXp()))
-                .forEach(u -> entries.add(new LeaderboardEntryDto(
-                        entries.size() + 1,
-                        u.getId(), u.getName(), u.getXp(), u.getLevel(), u.getStreak()
-                )));
+        int rank = 1;
+        for (int i = 0; i < sorted.size(); i++) {
+            if (i > 0 && sorted.get(i)[1] < sorted.get(i - 1)[1]) {
+                rank = i + 1;
+            }
+            User u = userMap.get(sorted.get(i)[0]);
+            if (u != null) {
+                entries.add(new LeaderboardEntryDto(
+                        rank, u.getId(), u.getName(),
+                        xpMap.getOrDefault(u.getId(), 0), u.getLevel(), u.getStreak()
+                ));
+            }
+        }
         return entries;
     }
 }

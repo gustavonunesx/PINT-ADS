@@ -84,8 +84,8 @@ export default function LeaderboardPage({ user, onNavigate, onLogout }) {
   }, [period, user?.id])
 
   const myEntry = board.find(e => e.isMe)
-  const top3    = board.slice(0, 3)
-  const rest    = board.slice(3)
+  const top3    = board.filter(e => e.rank <= 3).slice(0, 3)
+  const rest    = board.filter(e => e.rank > 3)
 
   return (
     <AppShell user={user} onNavigate={onNavigate} onLogout={onLogout} activePage="leaderboard">
