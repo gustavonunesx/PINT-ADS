@@ -71,15 +71,11 @@ public class LeaderboardService {
 
     private List<LeaderboardEntryDto> assignRanks(List<long[]> sorted, Map<Long, User> userMap, Map<Long, Integer> xpMap) {
         List<LeaderboardEntryDto> entries = new ArrayList<>();
-        int rank = 1;
         for (int i = 0; i < sorted.size(); i++) {
-            if (i > 0 && sorted.get(i)[1] < sorted.get(i - 1)[1]) {
-                rank = i + 1;
-            }
             User u = userMap.get(sorted.get(i)[0]);
             if (u != null) {
                 entries.add(new LeaderboardEntryDto(
-                        rank, u.getId(), u.getName(),
+                        i + 1, u.getId(), u.getName(),
                         xpMap.getOrDefault(u.getId(), 0), u.getLevel(), u.getStreak()
                 ));
             }
