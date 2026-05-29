@@ -41,27 +41,34 @@ function normalize(e, currentUserId) {
 }
 
 function Podium({ top3 }) {
-  if (top3.length < 3) return null
-  const order   = [top3[1], top3[0], top3[2]]
+  if (top3.length === 0) return null
+
+  // order: 2nd (left), 1st (center), 3rd (right) — fill missing slots with null
+  const p1 = top3[0] ?? null
+  const p2 = top3[1] ?? null
+  const p3 = top3[2] ?? null
+  const order   = [p2, p1, p3]
   const heights = ['140px', '180px', '110px']
   const labels  = ['2º', '1º', '3º']
 
   return (
     <div className="podium">
       {order.map((p, i) => (
-        <div className="podium-col" key={p.rank}>
-          <div className="podium-avatar-wrap">
-            {p.badge && <span className="podium-badge">{p.badge}</span>}
-            <div className="podium-avatar" style={{ background: `${p.color}20`, border: `2px solid ${p.color}`, color: p.color }}>
-              {p.avatar}
+        p ? (
+          <div className="podium-col" key={p.userId}>
+            <div className="podium-avatar-wrap">
+              {p.badge && <span className="podium-badge">{p.badge}</span>}
+              <div className="podium-avatar" style={{ background: `${p.color}20`, border: `2px solid ${p.color}`, color: p.color }}>
+                {p.avatar}
+              </div>
+              <div className="podium-name">{p.name.split(' ')[0]}</div>
+              <div className="podium-xp" style={{ color: p.color }}>{p.xp.toLocaleString('pt-BR')} XP</div>
             </div>
-            <div className="podium-name">{p.name.split(' ')[0]}</div>
-            <div className="podium-xp" style={{ color: p.color }}>{p.xp.toLocaleString('pt-BR')} XP</div>
+            <div className="podium-block" style={{ height: heights[i], background: `${p.color}14`, borderTop: `2px solid ${p.color}` }}>
+              <span className="podium-pos">{labels[i]}</span>
+            </div>
           </div>
-          <div className="podium-block" style={{ height: heights[i], background: `${p.color}14`, borderTop: `2px solid ${p.color}` }}>
-            <span className="podium-pos">{labels[i]}</span>
-          </div>
-        </div>
+        ) : <div className="podium-col" key={`empty-${i}`} />
       ))}
     </div>
   )
