@@ -22,7 +22,7 @@ function normalizeCourse(c) {
     students:     c.students     ?? c.enrolledCount ?? 0,
     lessons:      c.lessons      ?? c.lessonsCount  ?? 0,
     published:    c.published    ?? false,
-    lessons_data: c.lessons_data ?? c.lessons_list  ?? [],
+    lessons_data: (c.lessons_data ?? c.lessons_list ?? []).map(l => ({ ...l, published: true })),
     accessCode:   c.accessCode   ?? null,
     description:  c.description  ?? '',
     category:     c.category     ?? '',
@@ -327,7 +327,7 @@ function LessonEditor({ course, onClose, onSave }) {
       cover: null,
       duration: '10 min',
       videoUrl: null,
-      published: false,
+      published: true,
     }
     setLessons(ls => [...ls, newL])
     setEditing(newL.id)
@@ -400,12 +400,6 @@ function LessonEditor({ course, onClose, onSave }) {
                   </div>
                 </div>
                 <div className="lesson-item-actions">
-                  <button className={`lesson-pub-btn ${lesson.published ? 'active' : ''}`}
-                    style={lesson.published ? { color: course.color, borderColor: `${course.color}40` } : {}}
-                    onClick={e => { e.stopPropagation(); togglePublish(lesson.id) }}
-                    title={lesson.published ? 'Despublicar' : 'Publicar'}>
-                    {lesson.published ? '✓' : '↑'}
-                  </button>
                   <button className="lesson-del-btn"
                     onClick={e => { e.stopPropagation(); removeLesson(lesson.id) }}
                     title="Remover aula">✕</button>
@@ -480,16 +474,6 @@ function LessonEditor({ course, onClose, onSave }) {
                       onUpload={url => updateLesson(lesson.id, 'cover', url)} />
                   </div>
 
-                  <div className="lesson-detail-footer">
-                    <button
-                      className={`lesson-publish-toggle ${lesson.published ? 'published' : ''}`}
-                      style={lesson.published
-                        ? { background: `${course.color}14`, color: course.color, borderColor: `${course.color}40` }
-                        : {}}
-                      onClick={() => togglePublish(lesson.id)}>
-                      {lesson.published ? '✓ Publicado' : '↑ Publicar aula'}
-                    </button>
-                  </div>
                 </div>
               )
             })() : (
@@ -718,7 +702,7 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
                       <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>{course.institution}</span>
                     </div>}
                 <div className="inst-course-badge" style={{ color: course.color, background: `${course.color}18`, borderColor: `${course.color}30` }}>
-                  {course.published ? '● Publicado' : '○ Rascunho'}
+                  {'● Publicado'}
                 </div>
               </div>
 
@@ -781,14 +765,6 @@ export default function InstitutionDashboard({ user, onNavigate, onLogout }) {
                     style={{ color: course.color, borderColor: `${course.color}30`, background: `${course.color}0a` }}
                     onClick={() => setEditing(course)}>
                     ✏️ Aulas
-                  </button>
-                  <button
-                    className={`inst-btn-publish ${course.published ? 'published' : ''}`}
-                    style={course.published
-                      ? { color: course.color, borderColor: `${course.color}40`, background: `${course.color}10` }
-                      : {}}
-                    onClick={() => togglePublish(course.id)}>
-                    {course.published ? '✓ Publicado' : '↑ Publicar'}
                   </button>
                   {deletingId === course.id ? (
                     <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}>

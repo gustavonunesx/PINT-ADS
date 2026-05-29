@@ -33,7 +33,7 @@ public class Lesson {
     @Column(columnDefinition = "TEXT")
     private String videoUrl;
 
-    private boolean published = false;
+    private boolean published = true;
 
     private String duration;
 }
